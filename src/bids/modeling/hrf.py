@@ -9,6 +9,7 @@ Author: Bertrand Thirion, 2011--2015
 import warnings
 
 import numpy as np
+from numpy.typing import NDArray
 
 
 def _gamma_difference_hrf(
@@ -265,7 +266,12 @@ def glover_dispersion_derivative(tr, oversampling=50, time_length=32.0, onset=0.
     return dhrf
 
 
-def _sample_condition(exp_condition, frame_times, oversampling=50, min_onset=-24):
+def _sample_condition(
+    exp_condition: NDArray[np.float64],
+    frame_times: NDArray[np.float64],
+    oversampling: int = 50,
+    min_onset: float = -24.0,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     """Make a possibly oversampled event regressor from condition information.
 
     Parameters
@@ -290,51 +296,51 @@ def _sample_condition(exp_condition, frame_times, oversampling=50, min_onset=-24
 
     """
     # Find the high-resolution frame_times
-    n = frame_times.size
-    min_onset = float(min_onset)
-    n_hr = (
-        (n - 1)
-        * 1.0
-        / (frame_times.max() - frame_times.min())
-        * (frame_times.max() * (1 + 1.0 / (n - 1)) - frame_times.min() - min_onset)
-        * oversampling
-    ) + 1
-
+    n = int(frame_times.size)
+    frame_min = float(np.min(frame_times))
+    frame_max = float(np.max(frame_times))
+    frame_range = frame_max - frame_min
+    end_time = frame_max * (1.0 + 1.0 / (n - 1))
+    start_time = frame_min + min_onset
+    n_hr = ((n - 1) / frame_range * (end_time - start_time) * oversampling) + 1
     hr_frame_times = np.linspace(
-        frame_times.min() + min_onset,
-        frame_times.max() * (1 + 1.0 / (n - 1)),
-        np.rint(n_hr).astype(int),
+        start_time,
+        end_time,
+        int(np.rint(n_hr)),
     )
-
     # Get the condition information
-    onsets, durations, values = tuple(map(np.asanyarray, exp_condition))
-    if (onsets < frame_times[0] + min_onset).any():
+    onsets = np.asarray(exp_condition[0], dtype=np.float64)
+    durations = np.asarray(exp_condition[1], dtype=np.float64)
+    values = np.asarray(exp_condition[2], dtype=np.float64)
+    if (onsets < float(frame_times[0]) + min_onset).any():
         warnings.warn(  # noqa: B028
             (
                 'Some stimulus onsets are earlier than %s in the'
                 ' experiment and are thus not considered in the model'
-                % (frame_times[0] + min_onset)
+                % (float(frame_times[0]) + min_onset)
             ),
             UserWarning,
         )
-
     # Set up the regressor timecourse
-    tmax = len(hr_frame_times)
-    regressor = np.zeros_like(hr_frame_times).astype(float)
-    t_onset = np.minimum(np.searchsorted(hr_frame_times, onsets), tmax - 1)
+    tmax = int(hr_frame_times.size)
+    regressor = np.zeros(tmax, dtype=np.float64)
+    t_onset = np.minimum(
+        np.searchsorted(hr_frame_times, onsets),
+        tmax - 1,
+    )
     for t, v in zip(t_onset, values):  # noqa: B905
         regressor[t] += v
-    t_offset = np.minimum(np.searchsorted(hr_frame_times, onsets + durations), tmax - 1)
-
+    t_offset = np.minimum(
+        np.searchsorted(hr_frame_times, onsets + durations),
+        tmax - 1,
+    )
     # Handle the case where duration is 0 by offsetting at t + 1
     for i, t in enumerate(t_offset):
         if t < (tmax - 1) and t == t_onset[i]:
             t_offset[i] += 1
-
     for t, v in zip(t_offset, values):  # noqa: B905
         regressor[t] -= v
     regressor = np.cumsum(regressor)
-
     return regressor, hr_frame_times
 
 
@@ -390,7 +396,7 @@ def _orthogonalize(X):
     return X
 
 
-def _regressor_names(con_name, hrf_model, fir_delays=None):
+def _regressor_names(con_name: str, hrf_model, fir_delays: list[float] | None = None):
     """Return a list of regressor names, computed from con-name and hrf type
 
     Parameters
@@ -415,10 +421,14 @@ def _regressor_names(con_name, hrf_model, fir_delays=None):
     elif hrf_model in ['spm + derivative + dispersion', 'glover + derivative + dispersion']:
         return [con_name, con_name + '_derivative', con_name + '_dispersion']
     elif hrf_model == 'fir':
+        if fir_delays is None:
+            raise ValueError('fir_delays must be specified for FIR models')
         return [con_name + '_delay_%d' % i for i in fir_delays]  # noqa: UP031
 
 
-def _hrf_kernel(hrf_model, tr, oversampling=50, fir_delays=None):
+def _hrf_kernel(
+    hrf_model: str | None, tr: float, oversampling: int = 50, fir_delays: list[float] | None = None
+):
     """Given the specification of the hemodynamic model and time parameters,
     return the list of matching kernels
 
@@ -470,8 +480,10 @@ def _hrf_kernel(hrf_model, tr, oversampling=50, fir_delays=None):
             glover_dispersion_derivative(tr, oversampling),
         ]
     elif hrf_model == 'fir':
+        if fir_delays is None:
+            raise ValueError('fir_delays must be specified for FIR models')
         hkernel = [
-            np.hstack((np.zeros(f * oversampling), np.ones(oversampling))) for f in fir_delays
+            np.hstack((np.zeros(int(f * oversampling)), np.ones(oversampling))) for f in fir_delays
         ]
     elif hrf_model is None:
         hkernel = [np.hstack((1, np.zeros(oversampling - 1)))]

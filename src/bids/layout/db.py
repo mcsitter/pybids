@@ -5,6 +5,8 @@ import sqlite3
 from functools import lru_cache
 
 import sqlalchemy as sa
+from sqlalchemy.event import listens_for
+from sqlalchemy.orm import sessionmaker
 from upath import UPath as Path
 
 from bids.utils import listify
@@ -34,7 +36,7 @@ class ConnectionManager:  # noqa: D101
         )
 
         self.engine = self._get_engine(self.database_file)
-        self.sessionmaker = sa.orm.sessionmaker(bind=self.engine)
+        self.sessionmaker = sessionmaker(bind=self.engine)
         self._session = None
 
         if reset_database:
@@ -81,7 +83,7 @@ class ConnectionManager:  # noqa: D101
             """Regex function for SQLite's REGEXP."""
             if not isinstance(item, str):
                 return False
-            reg = re.compile(expr, re.I)
+            reg = re.compile(expr, re.IGNORECASE)
             return reg.search(item) is not None
 
         engine.connect()
@@ -89,7 +91,7 @@ class ConnectionManager:  # noqa: D101
         # Do not remove this decorator!!! An in-line create_function call will
         # work when using an in-memory SQLite DB, but fails when using a file.
         # For more details, see https://stackoverflow.com/questions/12461814/
-        @sa.event.listens_for(engine, 'begin')
+        @listens_for(engine, 'begin')
         def do_begin(conn):
             conn.connection.create_function('regexp', 2, regexp)
 

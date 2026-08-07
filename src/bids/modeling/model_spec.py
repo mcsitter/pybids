@@ -1,4 +1,7 @@
-from abc import ABCMeta, abstractmethod  # noqa: D100
+"""Model specification classes."""
+
+from abc import ABCMeta, abstractmethod
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -13,7 +16,6 @@ class ModelSpec(metaclass=ABCMeta):
     @abstractmethod
     def from_df(self, df, model, metadata=None):
         """Initialize from a pandas DataFrame."""
-        pass
 
 
 class GLMMSpec(ModelSpec):
@@ -104,7 +106,9 @@ class GLMMSpec(ModelSpec):
             t = Term(col, data, categorical=cat)
             self.add_term(t)
 
-    def build_variance_components(self, Z, groups=None, sigma=None, names=None):
+    def build_variance_components(
+        self, Z, groups: np.ndarray | pd.DataFrame | None = None, sigma=None, names=None
+    ):
         """Build one or more variance components from the columns of a binary
         grouping matrix and variance specification.
 
@@ -133,6 +137,7 @@ class GLMMSpec(ModelSpec):
 
         # Work with array instead of DF
         if hasattr(groups, 'values'):
+            groups = cast(pd.DataFrame, groups)
             groups = groups.values
 
         for i in range(n_grps):
@@ -184,7 +189,13 @@ class GLMMSpec(ModelSpec):
         return [t for t in self.terms.values() if isinstance(t, VarComp)]
 
     @classmethod
-    def from_df(cls, df, model, metadata=None, formula=None):
+    def from_df(
+        cls,
+        df: pd.DataFrame,
+        model,
+        metadata: pd.DataFrame | None = None,
+        formula: str | None = None,
+    ) -> 'GLMMSpec':
         """Initialize a GLMMSpec instance from a BIDSVariableCollection and
         a BIDS-StatsModels JSON spec.
 
@@ -221,7 +232,7 @@ class GLMMSpec(ModelSpec):
 
         formula = formula or model.get('formula')
         if formula is not None:
-            df = model_matrix(formula, df)
+            df = model_matrix(formula, df)  # ty: ignore[invalid-assignment]
 
         kwargs['X'] = df
 

@@ -5,6 +5,7 @@ import re
 import warnings
 from collections import defaultdict
 from functools import cache, partial
+from typing import TYPE_CHECKING
 
 from bids_validator import BIDSValidator
 from upath import UPath as Path
@@ -13,6 +14,9 @@ from ..exceptions import BIDSConflictingValuesError
 from ..utils import listify, make_bidsfile
 from .models import Config, Entity, FileAssociation, Tag, _create_tag_dict
 from .validation import validate_indexing_args
+
+if TYPE_CHECKING:
+    from .layout import BIDSLayout
 
 
 def _regexfy(patt, root=None):
@@ -108,13 +112,16 @@ class BIDSLayoutIndexer:
 
     """
 
+    _layout: 'BIDSLayout'
+    _config: list[Config]
+
     def __init__(
         self,
-        validate=False,
+        validate: bool = False,
         ignore=None,
         force_index=None,
-        index_metadata=True,
-        config_filename='layout_config.json',
+        index_metadata: bool = True,
+        config_filename: str = 'layout_config.json',
         **filters,
     ):
         self.ignore = ignore
@@ -128,12 +135,10 @@ class BIDSLayoutIndexer:
             self.validator = BIDSValidator(index_associated=True)
 
         # Layout-dependent attributes to be set in __call__()
-        self._layout = None
-        self._config = None
         self._include_patterns = None
         self._exclude_patterns = None
 
-    def __call__(self, layout):  # noqa: D102
+    def __call__(self, layout: 'BIDSLayout'):  # noqa: D102
         self._layout = layout
         self._config = list(layout.config.values())
 
@@ -360,11 +365,11 @@ class BIDSLayoutIndexer:
         def create_association_pair(src, dst, kind, kind2=None):
             objs = []
             kind2 = kind2 or kind
-            pk1 = '#'.join([src, dst, kind])
+            pk1 = f'{src}#{dst}#{kind}'
             if pk1 not in seen_assocs:
                 objs.append(FileAssociation(src=src, dst=dst, kind=kind))
                 seen_assocs.add(pk1)
-            pk2 = '#'.join([dst, src, kind2])
+            pk2 = f'{dst}#{src}#{kind2}'
             if pk2 not in seen_assocs:
                 objs.append(FileAssociation(src=dst, dst=src, kind=kind2))
                 seen_assocs.add(pk2)

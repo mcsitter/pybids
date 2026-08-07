@@ -1,5 +1,7 @@
 """Miscellaneous layout-related utilities."""
 
+from typing import Literal, overload
+
 from upath import UPath as Path
 
 from .. import config as cf
@@ -94,6 +96,22 @@ class PaddedInt(int):
 
     def __hash__(self):
         return super().__hash__()
+
+
+@overload
+def parse_file_entities(
+    filename: str,
+    entities: list | None = None,
+    config: str | list | None = None,
+    include_unmatched: Literal[False] = False,
+) -> dict[str, str]: ...
+@overload
+def parse_file_entities(
+    filename: str,
+    entities: list | None = None,
+    config: str | list | None = None,
+    include_unmatched: Literal[True] = True,
+) -> dict[str, str | None]: ...
 
 
 def parse_file_entities(filename, entities=None, config=None, include_unmatched=False):

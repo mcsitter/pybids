@@ -12,7 +12,7 @@ def plot_corr_matrix(dm_wide):  # noqa: D103
     corr_mat = (
         alt.Chart(dm_corr_long)
         .mark_rect()
-        .encode(
+        .encode(  # ty: ignore[unresolved-attribute]
             alt.X('index', sort=None, axis=alt.Axis(title=None)),
             alt.Y('index_2', sort=None, axis=alt.Axis(title=None)),
             tooltip=['r'],
@@ -54,7 +54,7 @@ def plot_design_matrix(dm_wide, scale=False, timecourse=True):  # noqa: D103
     heat = (
         alt.Chart(dm)
         .mark_rect()
-        .encode(
+        .encode(  # ty: ignore[unresolved-attribute]
             alt.Y(
                 'scan_number:O',
                 axis=alt.Axis(title='Time (TRs)', ticks=False, values=time_labels, labels=True),
@@ -78,7 +78,7 @@ def plot_design_matrix(dm_wide, scale=False, timecourse=True):  # noqa: D103
         line = (
             alt.Chart(dm, title='Timecourse (shift-click legend to select)')
             .mark_line(clip=True)
-            .encode(
+            .encode(  # ty: ignore[unresolved-attribute]
                 alt.X(
                     'scan_number',
                     axis=alt.Axis(title='Time (TRs)', values=time_labels, ticks=False),
@@ -94,7 +94,7 @@ def plot_design_matrix(dm_wide, scale=False, timecourse=True):  # noqa: D103
     legend = (
         alt.Chart(dm)
         .mark_square(size=200)
-        .encode(y=alt.Y('regressor:N', axis=alt.Axis(orient='right')), color=color)
+        .encode(y=alt.Y('regressor:N', axis=alt.Axis(orient='right')), color=color)  # ty: ignore[unresolved-attribute]
         .add_selection(selection)
     )
 

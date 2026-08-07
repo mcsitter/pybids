@@ -1,5 +1,17 @@
 """Classes for representing BIDS variables."""
 
+import sys
+from typing import Literal
+
+from numpy.typing import NDArray
+
+from bids.variables.entities import RunInfo
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
+
 import math
 import warnings
 from abc import ABCMeta, abstractmethod
@@ -19,7 +31,8 @@ class BIDSVariable(metaclass=ABCMeta):
     # Columns that define special properties (e.g., onset, duration). These
     # will be stored separately from the main data object, and are accessible
     # as properties on the BIDSVariable instance.
-    _property_columns = set()
+    _property_columns: set[str] = set()
+    index: pd.DataFrame
 
     def __init__(self, name, values, source):
         self.name = name
@@ -30,7 +43,7 @@ class BIDSVariable(metaclass=ABCMeta):
     def __repr__(self):
         return f"<{self.__class__.__name__}(name='{self.name}', source='{self.source}')>"
 
-    def clone(self, data=None, **kwargs):
+    def clone(self, data=None, **kwargs) -> Self:
         """Clone (deep copy) the current column, optionally replacing its
         data and/or any other attributes.
 
@@ -68,7 +81,9 @@ class BIDSVariable(metaclass=ABCMeta):
         # result.values.name = kwargs.get('name', self.name)
         return result
 
-    def filter(self, filters=None, query=None, strict=False, inplace=False):
+    def filter(
+        self, filters=None, query: str | None = None, strict=False, inplace: bool = False
+    ) -> Self | None:
         """Returns a copy of the current Variable with only rows that match
         the filters retained.
 
@@ -99,16 +114,16 @@ class BIDSVariable(metaclass=ABCMeta):
             raise ValueError("Either the 'filters' or the 'query' argument must be provided!")
 
         if filters is not None and query is None:
-            query = []
+            queries: list[str] = []
             for name, val in filters.items():
                 if name != 'amplitude' and name not in self.index.columns:
                     if strict:
                         return None
                     continue
                 oper = 'in' if isinstance(val, (list, tuple)) else '=='
-                q = f'{name} {oper} {repr(val)}'
-                query.append(q)
-            query = ' and '.join(query)
+                q = f'{name} {oper} {val!r}'
+                queries.append(q)
+            query = ' and '.join(queries)
 
         var = self if inplace else self.clone()
 
@@ -118,10 +133,11 @@ class BIDSVariable(metaclass=ABCMeta):
             var.values = var.values.loc[inds]
             var.index = var.index.loc[inds]
             if hasattr(self, '_build_entity_index'):
-                var._build_entity_index()
+                var._build_entity_index()  # ty: ignore[unresolved-attribute]
 
         if not inplace:
             return var
+        return None
 
     @classmethod
     def merge(cls, variables, name=None, **kwargs):
@@ -234,7 +250,7 @@ class BIDSVariable(metaclass=ABCMeta):
 
         return data.reset_index(drop=True)
 
-    def _extract_entities(self):
+    def _extract_entities(self) -> dict[str, str]:
         """Returns a dict of all non-varying entities for the current Variable.
 
         Notes
@@ -376,9 +392,20 @@ class SparseRunVariable(SimpleVariable):
     """
 
     _property_columns = {'onset', 'duration'}
+    duration: NDArray[np.float64]
+    onset: NDArray[np.float64]
 
-    def __init__(self, name, data, run_info, source, **kwargs):
-        if hasattr(run_info, 'duration'):
+    def __init__(
+        self,
+        name: str,
+        data: pd.DataFrame,
+        run_info: list[RunInfo],
+        source: Literal[
+            'events', 'physio', 'stim', 'regressors', 'scans', 'sessions', 'participants', 'beh'
+        ],
+        **kwargs,
+    ):
+        if isinstance(run_info, RunInfo):
             run_info = [run_info]
         if not isinstance(run_info, list):
             raise TypeError('We expect a list of run_info, got %s' % repr(run_info))  # noqa: UP031
@@ -389,11 +416,11 @@ class SparseRunVariable(SimpleVariable):
             setattr(self, sc, arr)
         super().__init__(name, data, source, **kwargs)
 
-    def get_duration(self):
+    def get_duration(self) -> float:
         """Return the total duration of the Variable's run(s)."""
         return sum([r.duration for r in self.run_info])
 
-    def to_dense(self, sampling_rate=None):
+    def to_dense(self, sampling_rate: float | None = None) -> 'DenseRunVariable':
         """Convert the current sparse column to a dense representation.
 
         If sampling_rate is not provided, the largest interval able to
@@ -413,7 +440,7 @@ class SparseRunVariable(SimpleVariable):
         # Cast onsets and durations to milliseconds
         onsets = np.round(self.onset * 1000).astype(int)
         durations = np.round(self.duration * 1000).astype(int)
-        gcd = np.gcd.reduce(np.r_[onsets, durations])
+        gcd = np.gcd.reduce(np.r_[onsets, durations])  # ty: ignore[no-matching-overload]
         bin_sr = 1000.0 / gcd
 
         # never use a computed SR smaller than the requested one, because
@@ -465,7 +492,7 @@ class SparseRunVariable(SimpleVariable):
 
         return dense_var
 
-    def _extract_entities(self):
+    def _extract_entities(self) -> dict[str, str]:
         # Get all entities common to all runs. The super method already does
         # this for entities that show up in filenames, so we just add the
         # ones that show up in the RunInfo tuples, as those include metadata.
@@ -544,11 +571,11 @@ class DenseRunVariable(BIDSVariable):
             for i, name in enumerate(df.columns)
         ]
 
-    def _build_entity_index(self, run_info, sampling_rate, match_vol=False):
+    def _build_entity_index(self, run_info, sampling_rate, match_vol=False) -> pd.DataFrame:
         """Build the entity index from run information."""
         interval = int(round(1000.0 / sampling_rate))
 
-        def _create_index(all_keys, all_reps, all_ents):
+        def _create_index(all_keys, all_reps, all_ents) -> pd.DataFrame:
             all_keys = np.array(sorted(all_keys))
             df = pd.DataFrame(
                 np.zeros((sum(all_reps), len(all_keys)), dtype=object), columns=all_keys
@@ -624,7 +651,7 @@ class DenseRunVariable(BIDSVariable):
 
         self.sampling_rate = sampling_rate
 
-    def to_df(self, condition=True, entities=True, timing=True, sampling_rate=None):  # noqa: D417
+    def to_df(self, condition=True, entities=True, timing=True, sampling_rate=None, **kwargs):  # noqa: D417
         """Convert to a DataFrame, with columns for name and entities.
 
         Parameters

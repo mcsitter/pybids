@@ -7,9 +7,11 @@ import warnings
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
+from sqlalchemy import Column
 
 from bids.modeling import transformations as pbt
 from bids.utils import convert_JSON, listify
@@ -145,12 +147,12 @@ class Transformation(metaclass=ABCMeta):  # noqa: D101
         variables = [groups[v] if v in groups else [v] for v in self.variables]
         self.variables = list(itertools.chain(*variables))
 
-    def _expand_variable_names(self):
+    def _expand_variable_names(self) -> None:
         """Filter all available arguments against collection's variables using
         unix-style pattern matching.
         """
 
-        def _replace_arg_values(values):
+        def _replace_arg_values(values) -> list:
             is_iter = isinstance(values, (list, tuple))
             values = listify(values)
             result = []
@@ -218,7 +220,7 @@ class Transformation(metaclass=ABCMeta):  # noqa: D101
                     )
                     raise ValueError(msg % (self.__class__.__name__, name))
 
-    def _densify_variables(self):
+    def _densify_variables(self) -> None:
         variables = []
 
         for var in self._densify:
@@ -233,7 +235,7 @@ class Transformation(metaclass=ABCMeta):  # noqa: D101
                 sr = self.collection.sampling_rate
                 self._variables[v] = var.to_dense(sr)
 
-    def transform(self):  # noqa: D102
+    def transform(self) -> None:  # noqa: D102
         output_passed = not (
             self.output is None and self.output_prefix is None and self.output_suffix is None
         )
@@ -258,7 +260,7 @@ class Transformation(metaclass=ABCMeta):  # noqa: D101
             self._densify_variables()
 
         # Set variables we plan to operate on directly
-        variables = [self._variables[c] for c in self.variables]
+        variables: list[Column] = [self._variables[c] for c in self.variables]
 
         # Align variables if needed
         self._align_variables(variables)
@@ -347,8 +349,8 @@ class Transformation(metaclass=ABCMeta):  # noqa: D101
                     self.collection[_output] = col
 
     @abstractmethod
-    def _transform(self, **kwargs):
-        pass
+    def _transform(self, *args, **kwargs) -> Any:
+        raise NotImplementedError('Transformations must implement a _transform() method.')
 
     def _preprocess(self, col):
         return col
@@ -427,10 +429,10 @@ class Transformation(metaclass=ABCMeta):  # noqa: D101
 class TransformationOutput:  # noqa: D101
     index: int
     output: BIDSVariableCollection
-    transformation_name: str
-    transformation_kwargs: dict
-    input_cols: list
-    level: str
+    transformation_name: str | None
+    transformation_kwargs: dict | None
+    input_cols: list | None
+    level: str | None
 
 
 class TransformerManager:

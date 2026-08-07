@@ -8,8 +8,10 @@ import re
 import sys
 import warnings
 from collections import defaultdict
+from collections.abc import Iterator
 from functools import lru_cache, partial
 from itertools import chain
+from typing import TYPE_CHECKING, Literal, overload
 
 import sqlalchemy as sa
 from bids_validator import BIDSValidator
@@ -41,7 +43,13 @@ else:
         return func(*args, **kwargs)
 
 
+if TYPE_CHECKING:
+    import pandas as pd
+
+
 __all__ = ['BIDSLayout']
+
+Scope = Literal['all', 'derivatives', 'raw', 'self'] | str | list[str]
 
 
 class Sentinel:
@@ -114,19 +122,21 @@ class BIDSLayout:
 
     """
 
+    source_pipeline: str | None
+
     def __init__(
         self,
-        root=None,
-        validate=True,
+        root: str | Path | None = None,
+        validate: bool = True,
         absolute_paths=RemovedOption,
         derivatives=False,
         config=None,
         sources=None,
-        regex_search=False,
-        database_path=None,
-        reset_database=False,
+        regex_search: bool = False,
+        database_path: str | None = None,
+        reset_database: bool = False,
         indexer=None,
-        is_derivative=False,
+        is_derivative: bool = False,
         **indexer_kwargs,
     ):
         if absolute_paths is not RemovedOption:
@@ -156,10 +166,14 @@ class BIDSLayout:
             self.connection_manager = ConnectionManager(database_path)
             info = self.connection_manager.layout_info
             # Overwrite init args with values in DB
-            root = info.root
+            root = Path(info.root)
             derivatives = info.derivatives
             config = info.config
 
+        if root is None:
+            raise ValueError(
+                'The root argument must be provided when initializing a new BIDSLayout.'
+            )
         # Validate that a valid BIDS project exists at root
         root, description = validate_root(root, validate)
         if any([is_derivative, description and description.get('DatasetType') == 'derivative']):
@@ -176,7 +190,7 @@ class BIDSLayout:
             default_config = ['bids']
             self.is_derivative = False
 
-        self._root = root  # type: Path
+        self._root: Path = root
         self.description = description
         self.derivatives = DerivativeDatasets()
         self.sources = sources
@@ -218,7 +232,7 @@ class BIDSLayout:
             )
 
     @property
-    def root(self):  # noqa: D102
+    def root(self) -> str:  # noqa: D102
         return str(self._root)
 
     def __getattr__(self, key):
@@ -244,7 +258,7 @@ class BIDSLayout:
             '%s object has no attribute named %r' % (self.__class__.__name__, key)  # noqa: UP031
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Provide a tidy summary of key properties."""
         n_subjects = len(
             [
@@ -278,7 +292,7 @@ class BIDSLayout:
         )
         return s
 
-    def _in_scope(self, scope):
+    def _in_scope(self, scope: Scope) -> bool:
         """Determine whether current BIDSLayout is in the passed scope.
 
         Parameters
@@ -322,7 +336,7 @@ class BIDSLayout:
         """Automatically convert entity query values to correct dtypes."""
         entities = entities.copy()
         names = list(entities.keys())
-        ents = {e.name: e for e in self.session.query(Entity).filter(Entity.name.in_(names)).all()}
+        ents = {e.name: e for e in self.session.query(Entity).filter(Entity.name.in_(names)).all()}  # ty: ignore[unresolved-attribute]
         # Fail silently because the DB may still know how to reconcile
         # type differences.
         for name, val in entities.items():
@@ -526,7 +540,7 @@ class BIDSLayout:
 
         return path_components
 
-    def get_files(self, scope='all'):
+    def get_files(self, scope: Scope = 'all') -> dict[str, BIDSFile]:
         """Get BIDSFiles for all layouts in the specified scope.
 
         Parameters
@@ -551,10 +565,28 @@ class BIDSLayout:
             files.update({f.path: f for f in results})
         return files
 
-    def clone(self):
+    def clone(self) -> 'BIDSLayout':
         """Return a deep copy of the current BIDSLayout."""
         return copy.deepcopy(self)
 
+    @overload
+    def parse_file_entities(
+        self,
+        filename: str,
+        scope: Scope = 'all',
+        entities=None,
+        config=None,
+        include_unmatched: bool = False,
+    ) -> dict[str, str]: ...
+    @overload
+    def parse_file_entities(
+        self,
+        filename: Path,
+        scope: Scope = 'all',
+        entities=None,
+        config=None,
+        include_unmatched: bool = True,
+    ) -> dict[str, str | None]: ...
     def parse_file_entities(
         self, filename, scope='all', entities=None, config=None, include_unmatched=False
     ):
@@ -596,7 +628,7 @@ class BIDSLayout:
 
         return parse_file_entities(filename, entities, config, include_unmatched)
 
-    def _get_derivative_dirs(self, paths):
+    def _get_derivative_dirs(self, paths: list[str | Path]) -> Iterator[tuple[str, Path]]:
         for path in paths:
             p = Path(path).absolute()
             base = p.name
@@ -664,7 +696,7 @@ class BIDSLayout:
                 )
             self.derivatives[name] = BIDSLayout(path, is_derivative=True, **kwargs)
 
-    def to_df(self, metadata=False, **filters):
+    def to_df(self, metadata: bool = False, **filters) -> 'pd.DataFrame':
         """Return information for BIDSFiles tracked in Layout as pd.DataFrame.
 
         Parameters
@@ -934,7 +966,7 @@ class BIDSLayout:
         """
         filename = self._root.joinpath(filename).absolute()
         for layout in self._get_layouts_in_scope(scope):
-            result = layout.session.query(BIDSFile).filter_by(path=str(filename)).first()  # noqa: E501
+            result = layout.session.query(BIDSFile).filter_by(path=str(filename)).first()
             if result:
                 return result
         return None
@@ -1001,7 +1033,7 @@ class BIDSLayout:
 
                 query = join_method(
                     tag_alias,
-                    sa.and_(BIDSFile.path == tag_alias.file_path, tag_alias.entity_name == name),
+                    sa.and_(BIDSFile.path == tag_alias.file_path, tag_alias.entity_name == name),  # ty: ignore[invalid-argument-type]
                 )
 
                 query = query.filter(val_clause)
@@ -1208,7 +1240,7 @@ class BIDSLayout:
         # Build list of candidate directories to check
         search_paths = []
         while True:
-            if path in folders and folders[path]:
+            if folders.get(path):
                 search_paths.append(path)
             parent = path.parent
             if parent == path:

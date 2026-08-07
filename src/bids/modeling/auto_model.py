@@ -19,7 +19,9 @@ def _make_passthrough_contrast(level, model_type='glm', test='t'):
     return block
 
 
-def auto_model(layout, scan_length=None, one_vs_rest=False):
+def auto_model(
+    layout, scan_length=None, one_vs_rest=False
+) -> list[OrderedDict[str, str | dict | list]]:
     """Create a simple default model for each of the tasks in a BIDSLayout.
     Contrasts each trial type against all other trial types and trial types
     at the run level and then uses dummy contrasts at each other level
@@ -71,11 +73,11 @@ def auto_model(layout, scan_length=None, one_vs_rest=False):
         # Get trial types
         run_nodes = load_variables(layout, task=task_name, levels=['run'], scan_length=scan_length)
 
-        evs = []
+        evs: list[str] = []
         for n in run_nodes.nodes:
             evs.extend(n.variables['trial_type'].values.values)
-        trial_types = np.unique(evs)
-        trial_type_factors = ['trial_type.' + tt for tt in trial_types]
+        trial_types: np.ndarray = np.unique(evs)
+        trial_type_factors: list[str] = ['trial_type.' + tt for tt in trial_types]
 
         run_model = dict(Type='glm', X=trial_type_factors)  # noqa: C408
         # Add HRF
@@ -96,7 +98,7 @@ def auto_model(layout, scan_length=None, one_vs_rest=False):
             # If there are multiple trial types, build contrasts
             contrasts = []
             for tt in trial_types:
-                cdict = OrderedDict()
+                cdict: OrderedDict[str, str | list] = OrderedDict()
                 if len(trial_types) > 1:
                     cdict['Name'] = 'run_' + tt + '_vs_others'
                 else:

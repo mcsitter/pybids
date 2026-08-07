@@ -12,6 +12,7 @@ extend-exclude = [
   "*tests/*",
   "*.ipynb",
   "src/bids/external/",
+  "src/bids/due.py",
 ]
 
 [format]

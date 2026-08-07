@@ -6,6 +6,7 @@ import sys
 import warnings
 from itertools import product
 from string import Formatter
+from typing import Literal, overload
 
 from upath import UPath as Path
 
@@ -14,6 +15,22 @@ from ..utils import listify
 __all__ = ['build_path', 'write_to_file']
 
 _PATTERN_FIND = re.compile(r'({([\w\d]*?)(?:<([^>]+)>)?(?:\|((?:\.?[\w])+))?\})')
+
+
+@overload
+def build_path(
+    entities: dict[str, str | None],
+    path_patterns: str | list[str],
+    strict: bool = False,
+) -> str | None: ...
+
+
+@overload
+def build_path(
+    entities: dict[str, str | list[str] | None],
+    path_patterns: str | list[str],
+    strict: bool = False,
+) -> str | list[str] | None: ...
 
 
 def build_path(entities, path_patterns, strict=False):
@@ -129,7 +146,7 @@ def build_path(entities, path_patterns, strict=False):
 
     # Loop over available patherns, return first one that matches all
     for pattern in path_patterns:
-        entities_matched = list(_PATTERN_FIND.findall(pattern))
+        entities_matched: list[tuple[str, str, str, str]] = list(_PATTERN_FIND.findall(pattern))
         defined = [e[1] for e in entities_matched]
 
         # If strict, all entities must be contained in the pattern
@@ -146,7 +163,10 @@ def build_path(entities, path_patterns, strict=False):
 
         # Accept extensions with and without leading dot
         if 'extension' in tmp_entities:
-            exts = [e.lstrip('.') for e in tmp_entities['extension']]
+            extension = tmp_entities['extension']
+            if not isinstance(extension, list) or not all(isinstance(e, str) for e in extension):
+                raise TypeError('extension must be a list of strings')
+            exts = [e.lstrip('.') for e in extension]
             # Does this pattern place a dot before the extension, or expect it inside?
             if re.search(r'\.\{extension', pattern):
                 tmp_entities['extension'] = exts
@@ -203,19 +223,19 @@ def build_path(entities, path_patterns, strict=False):
 
 
 def write_to_file(
-    path,
-    contents=None,
-    link_to=None,
-    copy_from=None,
-    content_mode='text',
-    root=None,
-    conflicts='fail',
-):
+    path: str | Path,
+    contents: str | bytes | None = None,
+    link_to: str | None = None,
+    copy_from: str | None = None,
+    content_mode: Literal['text', 'binary'] = 'text',
+    root: str | Path | None = None,
+    conflicts: Literal['fail', 'skip', 'overwrite', 'append'] = 'fail',
+) -> None:
     """Writes provided contents to a new path, or copies from an old path.
 
     Parameters
     ----------
-    path : str
+    path : str | Path
         Destination path of the desired contents.
     contents : str
         Raw text or binary encoded string of contents to write
@@ -286,7 +306,7 @@ def write_to_file(
     elif copy_from is not None:
         if not Path(copy_from).exists():
             raise ValueError(f"Source file '{copy_from}' does not exist.")
-        shutil.copy(copy_from, path)
+        shutil.copy(copy_from, str(path))
 
     elif contents:
         mode = 'wb' if content_mode == 'binary' else 'w'
@@ -316,7 +336,7 @@ def _expand_options(value):
     return [value % _r for _r in product(*expand_patterns)]
 
 
-def _expand_entities(entities):
+def _expand_entities(entities: dict[str, str]) -> list[dict[str, str]]:
     """Generate multiple replacement queries based on all combinations of values.
 
     Examples

@@ -9,13 +9,13 @@ from upath import UPath as Path
 from ..exceptions import BIDSDerivativesValidationError, BIDSValidationError
 from ..utils import listify
 
-MANDATORY_BIDS_FIELDS = {
+MANDATORY_BIDS_FIELDS: dict[str, dict[str, str | list[dict[str, str]]]] = {
     'Name': {'Name': 'Example dataset'},
     'BIDSVersion': {'BIDSVersion': '1.0.2'},
 }
 
 
-MANDATORY_DERIVATIVES_FIELDS = {
+MANDATORY_DERIVATIVES_FIELDS: dict[str, dict[str, str | list[dict[str, str]]]] = {
     **MANDATORY_BIDS_FIELDS,
     'GeneratedBy': {'GeneratedBy': [{'Name': 'Example pipeline'}]},
 }
@@ -37,7 +37,7 @@ ALWAYS_IGNORE = (
 )
 
 
-def validate_root(root, validate):  # noqa: D103
+def validate_root(root: str | Path, validate: bool) -> tuple[Path, dict | None]:  # noqa: D103
     # Validate root argument and make sure it contains mandatory info
     try:
         root = Path(root)
@@ -94,7 +94,7 @@ def validate_root(root, validate):  # noqa: D103
     return root, description
 
 
-def validate_derivative_path(path, **kwargs):  # noqa: D103
+def validate_derivative_path(path: str | Path, **kwargs) -> str:  # noqa: D103
     # Collect all paths that contain a dataset_description.json
     dd = Path(path) / 'dataset_description.json'
     description = json.loads(dd.read_text(encoding='utf-8'))

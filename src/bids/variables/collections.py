@@ -584,11 +584,11 @@ class BIDSRunVariableCollection(BIDSVariableCollection):
         variables=None,
         format='wide',  # noqa: A002
         fillna=np.nan,
+        entities=True,
+        timing=True,
         sampling_rate='highest',
         include_sparse=True,
         include_dense=True,
-        entities=True,
-        timing=True,
     ):
         """Merge variables into a single pandas DataFrame.
 

@@ -128,7 +128,26 @@ source = [
 include = ["src/*", "tests/*"]
 
 [tool.ty.src]
+include = ["src"]
 exclude = [
-    "**/tests/**",
-    "**/conftest.py",
+    "src/**/tests/**",
+    "src/**/conftest.py",
+    "src/bids/due.py",
+    "src/bids/_version.py",
 ]
+
+[[tool.ty.overrides]]
+include = [
+    "src/bids/layout/models.py",
+    "src/bids/modeling/transformations/base.py",
+    "src/bids/modeling/auto_model.py",
+]
+
+[tool.ty.overrides.rules]
+invalid-assignment = "ignore"
+
+[[tool.ty.overrides]]
+include = ["src/bids/variables/variables.py"]
+
+[tool.ty.overrides.rules]
+unused-ignore-comment = "ignore"  # Due to changed function signature of np.gcd.reduce in numpy

@@ -9,6 +9,7 @@ from copy import deepcopy
 from functools import lru_cache
 from itertools import chain
 from pathlib import Path
+from typing import Literal
 
 from bidsschematools import rules
 from sqlalchemy import Boolean, Column, ForeignKey, String, Table
@@ -24,13 +25,29 @@ try:
 except ImportError:  # sqlalchemy < 1.4 # pragma: no cover
     from sqlalchemy.ext.declarative import declarative_base  # pragma: no cover
 
+from typing import TypeAlias, TypedDict
+
 from ..config import get_option
 from ..exceptions import BIDSChildDatasetError
 from ..utils import bids_sort, listify
 from .utils import BIDSMetadata, PaddedInt
 from .writing import build_path, write_to_file
 
+DTypeName: TypeAlias = Literal['bool', 'float', 'int', 'str', 'json']
+DType: TypeAlias = type | DTypeName
+
 Base = declarative_base()
+
+
+class WriteArgs(TypedDict, total=False):
+    """TypedDict for arguments to write_to_file()"""
+
+    path: str | UPath
+    root: str | None
+    conflicts: Literal['fail', 'skip', 'overwrite', 'append']
+    link_to: str
+    copy_from: str
+    content_mode: Literal['text', 'binary']
 
 
 class LayoutInfo(Base):
@@ -119,15 +136,21 @@ class Config(Base):
 
     __tablename__ = 'configs'
 
-    name = Column(String, primary_key=True)
-    _default_path_patterns = Column(String)
+    name: str = Column(String, primary_key=True)
+    _default_path_patterns: str = Column(String)
     entities = relationship(
         'Entity',
         secondary='config_to_entity_map',
         collection_class=attribute_mapped_collection('name'),
     )
 
-    def __init__(self, name, entities=None, default_path_patterns=None, session=None):
+    def __init__(
+        self,
+        name: str,
+        entities=None,
+        default_path_patterns: list[str] | None = None,
+        session=None,
+    ):
         self.name = name
         self.default_path_patterns = default_path_patterns
         self._default_path_patterns = json.dumps(default_path_patterns)
@@ -349,7 +372,7 @@ class Config(Base):
 
             if entity_name in special_entities:
                 # These entities use explicit value lists from schema rules
-                if entity_name in entity_values and entity_values[entity_name]:
+                if entity_values.get(entity_name):
                     # Filter out problematic values for extension entity
                     if entity_name == 'extension':
                         # Remove empty string and wildcard patterns
@@ -443,12 +466,12 @@ class BIDSFile(Base):
 
     __tablename__ = 'files'
 
-    path = Column(String, primary_key=True)
-    filename = Column(String)
-    dirname = Column(String)
-    entities = association_proxy('tags', 'value')
-    is_dir = Column(Boolean, index=True)
-    class_ = Column(String(20))
+    path: str = Column(String, primary_key=True)
+    filename: str = Column(String)
+    dirname: str = Column(String)
+    entities: dict[str, str | None] = association_proxy('tags', 'value')
+    is_dir: bool = Column(Boolean, index=True)
+    class_: str = Column(String(20))
 
     _associations = relationship(
         'BIDSFile',
@@ -467,11 +490,11 @@ class BIDSFile(Base):
 
     @property
     def _path(self):
-        return UPath(self.path)
+        return UPath(str(self.path))
 
     @property
     def _dirname(self):
-        return UPath(self.dirname)
+        return UPath(str(self.dirname))
 
     def __repr__(self):
         return f"<{self.__class__.__name__} filename='{self.path}'>"
@@ -481,12 +504,18 @@ class BIDSFile(Base):
 
     @property
     @lru_cache  # noqa: B019
-    def relpath(self):
+    def relpath(self) -> str:
         """Return path relative to layout root"""
-        root = object_session(self).query(LayoutInfo).first().root
+        session = object_session(self)
+        if session is None:
+            raise RuntimeError('Cannot determine layout root; no database session found.')
+        first = session.query(LayoutInfo).first()
+        if first is None:
+            raise RuntimeError('Cannot determine layout root; no LayoutInfo record found.')
+        root: str = first.root
         return str(UPath(self.path).relative_to(root))
 
-    def get_associations(self, kind=None, include_parents=False):
+    def get_associations(self, kind=None, include_parents=False) -> list['BIDSFile']:
         """Get associated files, optionally limiting by association kind.
 
         Parameters
@@ -512,9 +541,11 @@ class BIDSFile(Base):
             return self._associations
 
         session = object_session(self)
+        if session is None:
+            raise RuntimeError('Cannot get associations; no database session found.')
         q = (
             session.query(BIDSFile)
-            .join(FileAssociation, BIDSFile.path == FileAssociation.dst)
+            .join(FileAssociation, BIDSFile.path == FileAssociation.dst)  # ty: ignore[invalid-argument-type]
             .filter_by(src=self.path)
         )
 
@@ -569,6 +600,8 @@ class BIDSFile(Base):
             return self.entities
 
         session = object_session(self)
+        if session is None:
+            raise RuntimeError('Cannot get entities; no database session found.')
         query = session.query(Tag).filter_by(file_path=self.path).join(Entity)
 
         if metadata not in (None, 'all'):
@@ -579,7 +612,13 @@ class BIDSFile(Base):
             return bids_sort({t.entity_name: t.entity for t in results})
         return bids_sort({t.entity_name: t.value for t in results})
 
-    def copy(self, path_patterns, symbolic_link=False, root=None, conflicts='fail'):
+    def copy(
+        self,
+        path_patterns: list[str],
+        symbolic_link=False,
+        root: str | None = None,
+        conflicts: Literal['fail', 'skip', 'overwrite', 'append'] = 'fail',
+    ):
         """Copy the contents of a file to a new location.
 
         Parameters
@@ -602,8 +641,8 @@ class BIDSFile(Base):
 
         """
         new_filename = build_path(self.entities, path_patterns)
-        if not new_filename:
-            return None
+        if not new_filename or new_filename is None:
+            return
 
         if new_filename[-1] == os.sep:
             new_filename += self.filename
@@ -616,7 +655,7 @@ class BIDSFile(Base):
         if not path.exists():
             raise ValueError("Target filename to copy/symlink (%s) doesn't exist." % path)  # noqa: UP031
 
-        kwargs = dict(path=new_filename, root=root, conflicts=conflicts)  # noqa: C408
+        kwargs = WriteArgs(path=new_filename, root=root, conflicts=conflicts)
         if symbolic_link:
             kwargs['link_to'] = path
         else:
@@ -710,7 +749,7 @@ class BIDSImageFile(BIDSFile):
         try:
             import nibabel as nb
 
-            return nb.load(self.path, **kwargs)
+            return nb.load(str(self.path), **kwargs)
         except Exception as e:
             raise ValueError(
                 f"'{self.path}' does not appear to be an image format NiBabel can read."
@@ -738,7 +777,7 @@ class BIDSJSONFile(BIDSFile):
 
     def get_json(self):
         """Return the contents of the current file as a JSON string."""
-        with open(self.path) as f:
+        with open(str(self.path)) as f:
             return f.read()
 
 
@@ -768,20 +807,27 @@ class Entity(Base):
 
     __tablename__ = 'entities'
 
-    name = Column(String, primary_key=True)
-    mandatory = Column(Boolean, default=False)
-    pattern = Column(String)
-    directory = Column(String, nullable=True)
-    _dtype = Column(String, default='str')
+    name: str = Column(String, primary_key=True)
+    mandatory: bool = Column(Boolean, default=False)
+    pattern: str = Column(String)
+    directory: str | None = Column(String, nullable=True)
+    _dtype: DTypeName = Column(String, default='str')
     files = association_proxy('tags', 'value')
 
-    def __init__(self, name, pattern=None, mandatory=False, directory=None, dtype='str'):
+    def __init__(
+        self,
+        name: str,
+        pattern: str | None = None,
+        mandatory: bool = False,
+        directory: str | None = None,
+        dtype: DType = 'str',
+    ):
         self.name = name
-        self.pattern = pattern
+        self.pattern: str | None = pattern
         self.mandatory = mandatory
         self.directory = directory
 
-        if not isinstance(dtype, str):
+        if isinstance(dtype, type):
             dtype = dtype.__name__
         self._dtype = dtype
 
@@ -791,15 +837,16 @@ class Entity(Base):
         return f'<Entity {self.name} (pattern={self.pattern}, dtype={self.dtype})>'
 
     @reconstructor
-    def _init_on_load(self):
-        if self._dtype not in ('str', 'float', 'int', 'bool'):
+    def _init_on_load(self) -> None:
+        if self._dtype == 'json':
+            self.dtype = 'json'
+        elif self._dtype not in DTypeMap:
             raise ValueError(
                 f"Invalid dtype '{self._dtype}'. Must be one of 'int', 'float', 'bool', or 'str'."
             )
-        if self._dtype == 'int':
-            self.dtype = PaddedInt
         else:
-            self.dtype = eval(self._dtype)  # noqa: S307
+            self.dtype: type = DTypeMap[self._dtype]
+
         self.regex = re.compile(self.pattern) if self.pattern is not None else None
 
     def __iter__(self):
@@ -870,12 +917,11 @@ class Entity(Base):
         return val
 
 
-type_map = {
+DTypeMap: dict[Literal['bool', 'float', 'int', 'str'], type] = {
     'str': str,
     'int': PaddedInt,
     'float': float,
     'bool': bool,
-    'json': 'json',
 }
 
 
@@ -908,7 +954,7 @@ class Tag(Base):
     file_path = Column(String, ForeignKey('files.path'), primary_key=True)
     entity_name = Column(String, ForeignKey('entities.name'), primary_key=True)
     _value = Column(String, nullable=False)
-    _dtype = Column(String, default='str')
+    _dtype: Literal['str', 'int', 'float', 'bool', 'json'] = Column(String, default='str')
     is_metadata = Column(Boolean, default=False)
 
     file = relationship(
@@ -920,40 +966,52 @@ class Tag(Base):
         backref=backref('tags', collection_class=attribute_mapped_collection('file_path')),
     )
 
-    def __init__(self, file, entity, value, dtype=None, is_metadata=False):
+    def __init__(
+        self,
+        file: 'BIDSFile',
+        entity,
+        value,
+        dtype: str | type | None = None,
+        is_metadata: bool = False,
+    ):
         data = _create_tag_dict(file, entity, value, dtype, is_metadata)
 
         self.file_path = data['file_path']
         self.entity_name = data['entity_name']
-        self._dtype = data['_dtype']
-        self._value = data['_value']
+        self._dtype: Literal['str', 'int', 'float', 'bool', 'json'] = data['_dtype']
+        self._value: str = data['_value']
         self.is_metadata = data['is_metadata']
 
-        self.dtype = type_map[self._dtype]
-        if self._dtype != 'json':
-            self.value = self.dtype(value)
+        if self._dtype == 'json':
+            self.value = json.loads(self._value)
+            self.dtype = 'json'
         else:
-            self.value = value
+            converter = DTypeMap[self._dtype]
+            self.dtype = converter
+            self.value = converter(self._value)
 
     def __repr__(self):
         msg = '<Tag file:{!r} entity:{!r} value:{!r}>'
         return msg.format(self.file_path, self.entity_name, self.value)
 
     @reconstructor
-    def _init_on_load(self):
+    def _init_on_load(self) -> None:
         if self._dtype == 'json':
-            self.value = json.loads(self._value)
+            self.value = json.loads(str(self._value))
             self.dtype = 'json'
-        elif self._dtype == 'bool':
+            return
+        if self._dtype == 'bool':
             self.value = self._value == 'True'
             self.dtype = bool
-        else:
-            self.dtype = type_map[self._dtype]
-            self.value = self.dtype(self._value)
+            return
+        self.dtype: type = DTypeMap[self._dtype]
+        self.value = self.dtype(str(self._value))
 
 
-def _create_tag_dict(file, entity, value, dtype=None, is_metadata=False):
-    data = {}
+def _create_tag_dict(
+    file: 'BIDSFile', entity, value, dtype: str | type | None = None, is_metadata: bool = False
+) -> dict[str, str | bool]:
+    data: dict[str, str | bool] = {}
     if dtype is None:
         dtype = type(value)
 
@@ -969,7 +1027,7 @@ def _create_tag_dict(file, entity, value, dtype=None, is_metadata=False):
     if _dtype not in ('str', 'float', 'int', 'bool', 'json'):
         raise ValueError(
             f'Passed value has an invalid dtype ({dtype}). Must be one of '
-            'int, float, bool, or str.'
+            'int, float, bool, str, json.'
         )
 
     data['is_metadata'] = is_metadata

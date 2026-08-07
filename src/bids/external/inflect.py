@@ -1,5 +1,4 @@
-"""
-correctly generate plurals, ordinals, indefinite articles;
+"""correctly generate plurals, ordinals, indefinite articles;
 convert numbers to words
 
 Copyright (C) 2010 Paul Dyson
@@ -11,7 +10,7 @@ available from http://search.cpan.org/~dconway/
 
 This module can be downloaded at http://pypi.org/project/inflect
 
-methods:
+Methods:
       classical inflect
       plural plural_noun plural_verb plural_adj singular_noun no num a an
       compare compare_nouns compare_verbs compare_adjs
@@ -50,19 +49,13 @@ Exceptions:
 """
 
 import ast
-import re
-import functools
 import contextlib
+import functools
+import re
+from collections.abc import Callable, Iterable, Sequence
+from re import Match
 from typing import (
-    Dict,
-    Union,
-    Optional,
-    Iterable,
-    List,
-    Match,
-    Tuple,
-    Callable,
-    Sequence,
+    Literal,
     cast,
 )
 
@@ -107,9 +100,8 @@ def enclose(s: str) -> str:
     return f"(?:{s})"
 
 
-def joinstem(cutpoint: Optional[int] = 0, words: Optional[Iterable[str]] = None) -> str:
-    """
-    join stem of each word in words into a string for regex
+def joinstem(cutpoint: int | None = 0, words: Iterable[str] | None = None) -> str:
+    """Join stem of each word in words into a string for regex
     each word is truncated at cutpoint
     cutpoint is usually negative indicating the number of letters to remove
     from the end of each word
@@ -124,16 +116,15 @@ def joinstem(cutpoint: Optional[int] = 0, words: Optional[Iterable[str]] = None)
     return enclose("|".join(w[:cutpoint] for w in words))
 
 
-def bysize(words: Iterable[str]) -> Dict[int, set]:
-    """
-    take a list of words and return a dict of sets sorted by word length
+def bysize(words: Iterable[str]) -> dict[int, set]:
+    """Take a list of words and return a dict of sets sorted by word length
     e.g.
     ret[3]=set(['ant', 'cat', 'dog', 'pig'])
     ret[4]=set(['frog', 'goat'])
     ret[5]=set(['horse'])
     ret[8]=set(['elephant'])
     """
-    ret: Dict[int, set] = {}
+    ret: dict[int, set] = {}
     for w in words:
         if len(w) not in ret:
             ret[len(w)] = set()
@@ -144,11 +135,10 @@ def bysize(words: Iterable[str]) -> Dict[int, set]:
 def make_pl_si_lists(
     lst: Iterable[str],
     plending: str,
-    siendingsize: Optional[int],
+    siendingsize: int | None,
     dojoinstem: bool = True,
 ):
-    """
-    given a list of singular words: lst
+    """Given a list of singular words: lst
 
     an ending to append to make the plural: plending
 
@@ -157,13 +147,14 @@ def make_pl_si_lists(
 
     a flag whether to create a joinstem: dojoinstem
 
-    return:
+    Return:
     a list of pluralised words: si_list (called si because this is what you need to
     look for to make the singular)
 
     the pluralised words as a dict of sets sorted by word length: si_bysize
     the singular words as a dict of sets sorted by word length: pl_bysize
     if dojoinstem is True: a regular expression that matches any of the stems: stem
+
     """
     if siendingsize is not None:
         siendingsize = -siendingsize
@@ -847,17 +838,8 @@ pl_sb_C_im_list = ("goy", "seraph", "cherub")
 
 # UNCONDITIONAL "..man" -> "..mans"
 
-pl_sb_U_man_mans_list = """
-    ataman caiman cayman ceriman
-    desman dolman farman harman hetman
-    human leman ottoman shaman talisman
-""".split()
-pl_sb_U_man_mans_caps_list = """
-    Alabaman Bahaman Burman German
-    Hiroshiman Liman Nakayaman Norman Oklahoman
-    Panaman Roman Selman Sonaman Tacoman Yakiman
-    Yokohaman Yuman
-""".split()
+pl_sb_U_man_mans_list = ["ataman", "caiman", "cayman", "ceriman", "desman", "dolman", "farman", "harman", "hetman", "human", "leman", "ottoman", "shaman", "talisman"]
+pl_sb_U_man_mans_caps_list = ["Alabaman", "Bahaman", "Burman", "German", "Hiroshiman", "Liman", "Nakayaman", "Norman", "Oklahoman", "Panaman", "Roman", "Selman", "Sonaman", "Tacoman", "Yakiman", "Yokohaman", "Yuman"]
 
 (
     si_sb_U_man_mans_list,
@@ -1576,11 +1558,7 @@ si_sb_es_is = (
     "urinalyses",
 )
 
-pl_prep_list = """
-    about above across after among around at athwart before behind
-    below beneath beside besides between betwixt beyond but by
-    during except for from in into near of off on onto out over
-    since till to under until unto upon with""".split()
+pl_prep_list = ["about", "above", "across", "after", "among", "around", "at", "athwart", "before", "behind", "below", "beneath", "beside", "besides", "between", "betwixt", "beyond", "but", "by", "during", "except", "for", "from", "in", "into", "near", "of", "off", "on", "onto", "out", "over", "since", "till", "to", "under", "until", "unto", "upon", "with"]
 
 pl_prep_list_da = pl_prep_list + ["de", "du", "da"]
 
@@ -1623,7 +1601,7 @@ pl_pron_nom = {
     "theirs": "theirs",
 }
 
-si_pron: Dict[str, Dict[str, Union[str, Dict[str, str]]]] = {
+si_pron: dict[str, dict[str, str | dict[str, str]]] = {
     "nom": {v: k for (k, v) in pl_pron_nom.items()}
 }
 si_pron["nom"]["we"] = "I"
@@ -1948,8 +1926,8 @@ def_classical = dict(
     all=False, zero=False, herd=False, names=True, persons=False, ancient=False
 )
 
-all_classical = {k: True for k in def_classical}
-no_classical = {k: False for k in def_classical}
+all_classical = dict.fromkeys(def_classical, True)
+no_classical = dict.fromkeys(def_classical, False)
 
 
 # Maps strings to built-in constant types
@@ -2022,7 +2000,7 @@ DIGIT = re.compile(r"\d")
 
 class Words(str):
     lowered: str
-    split_: List[str]
+    split_: list[str]
     first: str
     last: str
 
@@ -2037,19 +2015,19 @@ class engine:
     def __init__(self) -> None:
 
         self.classical_dict = def_classical.copy()
-        self.persistent_count: Optional[int] = None
+        self.persistent_count: int | None = None
         self.mill_count = 0
-        self.pl_sb_user_defined: List[str] = []
-        self.pl_v_user_defined: List[str] = []
-        self.pl_adj_user_defined: List[str] = []
-        self.si_sb_user_defined: List[str] = []
-        self.A_a_user_defined: List[str] = []
+        self.pl_sb_user_defined: list[str] = []
+        self.pl_v_user_defined: list[str] = []
+        self.pl_adj_user_defined: list[str] = []
+        self.si_sb_user_defined: list[str] = []
+        self.A_a_user_defined: list[str] = []
         self.thegender = "neuter"
-        self.__number_args: Optional[Dict[str, str]] = None
+        self.__number_args: dict[str, str] | None = None
 
     @property
     def _number_args(self):
-        return cast(Dict[str, str], self.__number_args)
+        return cast(dict[str, str], self.__number_args)
 
     @_number_args.setter
     def _number_args(self, val):
@@ -2077,8 +2055,7 @@ class engine:
         raise AttributeError
 
     def defnoun(self, singular: str, plural: str) -> int:
-        """
-        Set the noun plural of singular to plural.
+        """Set the noun plural of singular to plural.
 
         """
         self.checkpat(singular)
@@ -2088,8 +2065,7 @@ class engine:
         return 1
 
     def defverb(self, s1: str, p1: str, s2: str, p2: str, s3: str, p3: str) -> int:
-        """
-        Set the verb plurals for s1, s2 and s3 to p1, p2 and p3 respectively.
+        """Set the verb plurals for s1, s2 and s3 to p1, p2 and p3 respectively.
 
         Where 1, 2 and 3 represent the 1st, 2nd and 3rd person forms of the verb.
 
@@ -2104,8 +2080,7 @@ class engine:
         return 1
 
     def defadj(self, singular: str, plural: str) -> int:
-        """
-        Set the adjective plural of singular to plural.
+        """Set the adjective plural of singular to plural.
 
         """
         self.checkpat(singular)
@@ -2114,8 +2089,7 @@ class engine:
         return 1
 
     def defa(self, pattern: str) -> int:
-        """
-        Define the indefinite article as 'a' for words matching pattern.
+        """Define the indefinite article as 'a' for words matching pattern.
 
         """
         self.checkpat(pattern)
@@ -2123,17 +2097,15 @@ class engine:
         return 1
 
     def defan(self, pattern: str) -> int:
-        """
-        Define the indefinite article as 'an' for words matching pattern.
+        """Define the indefinite article as 'an' for words matching pattern.
 
         """
         self.checkpat(pattern)
         self.A_a_user_defined.extend((pattern, "an"))
         return 1
 
-    def checkpat(self, pattern: Optional[str]) -> None:
-        """
-        check for errors in a regex pattern
+    def checkpat(self, pattern: str | None) -> None:
+        """Check for errors in a regex pattern
         """
         if pattern is None:
             return
@@ -2144,12 +2116,11 @@ class engine:
             raise BadUserDefinedPatternError
 
     def checkpatplural(self, pattern: str) -> None:
-        """
-        check for errors in a regex replace pattern
+        """Check for errors in a regex replace pattern
         """
         return
 
-    def ud_match(self, word: str, wordlist: List[str]) -> Optional[str]:
+    def ud_match(self, word: str, wordlist: list[str]) -> str | None:
         for i in range(len(wordlist) - 2, -2, -2):  # backwards through even elements
             mo = re.search(fr"^{wordlist[i]}$", word, re.IGNORECASE)
             if mo:
@@ -2162,8 +2133,7 @@ class engine:
         return None
 
     def classical(self, **kwargs) -> None:
-        """
-        turn classical mode on and off for various categories
+        """Turn classical mode on and off for various categories
 
         turn on all classical modes:
         classical()
@@ -2196,10 +2166,9 @@ class engine:
                 raise UnknownClassicalModeError
 
     def num(
-        self, count: Optional[int] = None, show: Optional[int] = None
+        self, count: int | None = None, show: int | None = None
     ) -> str:  # (;$count,$show)
-        """
-        Set the number to be used in other method calls.
+        """Set the number to be used in other method calls.
 
         Returns count.
 
@@ -2218,8 +2187,7 @@ class engine:
         return ""
 
     def gender(self, gender: str) -> None:
-        """
-        set the gender for the singular of plural pronouns
+        """Set the gender for the singular of plural pronouns
 
         can be one of:
         'neuter'                ('they' -> 'it')
@@ -2235,20 +2203,17 @@ class engine:
             raise BadGenderError
 
     def _get_value_from_ast(self, obj):
+        """Return the value of the ast object.
         """
-        Return the value of the ast object.
-        """
-        if isinstance(obj, ast.Num):
-            return obj.n
-        elif isinstance(obj, ast.Str):
-            return obj.s
+        if isinstance(obj, ast.Constant):
+            return obj.value
         elif isinstance(obj, ast.List):
             return [self._get_value_from_ast(e) for e in obj.elts]
         elif isinstance(obj, ast.Tuple):
             return tuple([self._get_value_from_ast(e) for e in obj.elts])
 
         # None, True and False are NameConstants in Py3.4 and above.
-        elif isinstance(obj, ast.NameConstant):
+        elif isinstance(obj, ast.Constant) and obj.value in (None, True, False):
             return obj.value
 
         # Probably passed a variable name.
@@ -2257,10 +2222,9 @@ class engine:
         raise NameError(f"name '{obj.id}' is not defined")
 
     def _string_to_substitute(
-        self, mo: Match, methods_dict: Dict[str, Callable]
+        self, mo: Match, methods_dict: dict[str, Callable]
     ) -> str:
-        """
-        Return the string to be substituted for the match.
+        """Return the string to be substituted for the match.
         """
         matched_text, f_name = mo.groups()
         # matched_text is the complete match string. e.g. plural_noun(cat)
@@ -2289,8 +2253,7 @@ class engine:
     # 0. PERFORM GENERAL INFLECTIONS IN A STRING
 
     def inflect(self, text: str) -> str:
-        """
-        Perform inflections in a string.
+        """Perform inflections in a string.
 
         e.g. inflect('The plural of cat is plural(cat)') returns
         'The plural of cat is cats'
@@ -2303,7 +2266,7 @@ class engine:
         save_persistent_count = self.persistent_count
 
         # Dictionary of allowed methods
-        methods_dict: Dict[str, Callable] = {
+        methods_dict: dict[str, Callable] = {
             "plural": self.plural,
             "plural_adj": self.plural_adj,
             "plural_noun": self.plural_noun,
@@ -2357,16 +2320,15 @@ class engine:
                 result[index] = result[index].upper()
         return " ".join(result)
 
-    def partition_word(self, text: str) -> Tuple[str, str, str]:
+    def partition_word(self, text: str) -> tuple[str, str, str]:
         mo = PARTITION_WORD.search(text)
         if mo:
             return mo.group(1), mo.group(2), mo.group(3)
         else:
             return "", "", ""
 
-    def plural(self, text: str, count: Optional[Union[str, int]] = None) -> str:
-        """
-        Return the plural of text.
+    def plural(self, text: str, count: str | int | None = None) -> str:
+        """Return the plural of text.
 
         If count supplied, then return text if count is one of:
             1, a, an, one, each, every, this, that
@@ -2387,9 +2349,8 @@ class engine:
         )
         return f"{pre}{plural}{post}"
 
-    def plural_noun(self, text: str, count: Optional[Union[str, int]] = None) -> str:
-        """
-        Return the plural of text, where text is a noun.
+    def plural_noun(self, text: str, count: str | int | None = None) -> str:
+        """Return the plural of text, where text is a noun.
 
         If count supplied, then return text if count is one of:
             1, a, an, one, each, every, this, that
@@ -2405,9 +2366,8 @@ class engine:
         plural = self.postprocess(word, self._plnoun(word, count))
         return f"{pre}{plural}{post}"
 
-    def plural_verb(self, text: str, count: Optional[Union[str, int]] = None) -> str:
-        """
-        Return the plural of text, where text is a verb.
+    def plural_verb(self, text: str, count: str | int | None = None) -> str:
+        """Return the plural of text, where text is a verb.
 
         If count supplied, then return text if count is one of:
             1, a, an, one, each, every, this, that
@@ -2426,9 +2386,8 @@ class engine:
         )
         return f"{pre}{plural}{post}"
 
-    def plural_adj(self, text: str, count: str = None) -> str:
-        """
-        Return the plural of text, where text is an adjective.
+    def plural_adj(self, text: str, count: Literal["1", "a", "an", "one", "each", "every", "this", "that"] | None = None) -> str:
+        """Return the plural of text, where text is an adjective.
 
         If count supplied, then return text if count is one of:
             1, a, an, one, each, every, this, that
@@ -2444,9 +2403,8 @@ class engine:
         plural = self.postprocess(word, self._pl_special_adjective(word, count) or word)
         return f"{pre}{plural}{post}"
 
-    def compare(self, word1: str, word2: str) -> Union[str, bool]:
-        """
-        compare word1 and word2 for equality regardless of plurality
+    def compare(self, word1: str, word2: str) -> str | bool:
+        """Compare word1 and word2 for equality regardless of plurality
 
         return values:
         eq - the strings are equal
@@ -2462,9 +2420,8 @@ class engine:
             or self._plequal(word1, word2, self.plural_adj)
         )
 
-    def compare_nouns(self, word1: str, word2: str) -> Union[str, bool]:
-        """
-        compare word1 and word2 for equality regardless of plurality
+    def compare_nouns(self, word1: str, word2: str) -> str | bool:
+        """Compare word1 and word2 for equality regardless of plurality
         word1 and word2 are to be treated as nouns
 
         return values:
@@ -2477,9 +2434,8 @@ class engine:
         """
         return self._plequal(word1, word2, self.plural_noun)
 
-    def compare_verbs(self, word1: str, word2: str) -> Union[str, bool]:
-        """
-        compare word1 and word2 for equality regardless of plurality
+    def compare_verbs(self, word1: str, word2: str) -> str | bool:
+        """Compare word1 and word2 for equality regardless of plurality
         word1 and word2 are to be treated as verbs
 
         return values:
@@ -2492,9 +2448,8 @@ class engine:
         """
         return self._plequal(word1, word2, self.plural_verb)
 
-    def compare_adjs(self, word1: str, word2: str) -> Union[str, bool]:
-        """
-        compare word1 and word2 for equality regardless of plurality
+    def compare_adjs(self, word1: str, word2: str) -> str | bool:
+        """Compare word1 and word2 for equality regardless of plurality
         word1 and word2 are to be treated as adjectives
 
         return values:
@@ -2510,11 +2465,10 @@ class engine:
     def singular_noun(
         self,
         text: str,
-        count: Optional[Union[int, str]] = None,
-        gender: Optional[str] = None,
-    ) -> Union[str, bool]:
-        """
-        Return the singular of text, where text is a plural noun.
+        count: int | str | None = None,
+        gender: str | None = None,
+    ) -> str | bool:
+        """Return the singular of text, where text is a plural noun.
 
         If count supplied, then return the singular if count is one of:
             1, a, an, one, each, every, this, that or if count is None
@@ -2548,7 +2502,7 @@ class engine:
             return f"{pre}{plural}{post}"
         return False
 
-    def _plequal(self, word1: str, word2: str, pl) -> Union[str, bool]:  # noqa: C901
+    def _plequal(self, word1: str, word2: str, pl) -> str | bool:
         classval = self.classical_dict.copy()
         self.classical_dict = all_classical.copy()
         if word1 == word2:
@@ -2624,7 +2578,7 @@ class engine:
             )
         )
 
-    def get_count(self, count: Optional[Union[str, int]] = None) -> Union[str, int]:
+    def get_count(self, count: str | int | None = None) -> str | int:
         if count is None and self.persistent_count is not None:
             count = self.persistent_count
 
@@ -2645,8 +2599,8 @@ class engine:
         return count
 
     # @profile
-    def _plnoun(  # noqa: C901
-        self, word: str, count: Optional[Union[str, int]] = None
+    def _plnoun(
+        self, word: str, count: str | int | None = None
     ) -> str:
         count = self.get_count(count)
 
@@ -2938,8 +2892,7 @@ class engine:
 
     @classmethod
     def _handle_prepositional_phrase(cls, phrase, transform, sep):
-        """
-        Given a word or phrase possibly separated by sep, parse out
+        """Given a word or phrase possibly separated by sep, parse out
         the prepositional phrase and apply the transform to the word
         preceding the prepositional phrase.
 
@@ -2972,9 +2925,9 @@ class engine:
         except StopIteration:
             raise ValueError("No pivot found")
 
-    def _pl_special_verb(  # noqa: C901
-        self, word: str, count: Optional[Union[str, int]] = None
-    ) -> Union[str, bool]:
+    def _pl_special_verb(
+        self, word: str, count: str | int | None = None
+    ) -> str | bool:
         if self.classical_dict["zero"] and str(count).lower() in pl_count_zero:
             return False
         count = self.get_count(count)
@@ -3055,7 +3008,7 @@ class engine:
         return False
 
     def _pl_general_verb(
-        self, word: str, count: Optional[Union[str, int]] = None
+        self, word: str, count: str | int | None = None
     ) -> str:
         count = self.get_count(count)
 
@@ -3079,8 +3032,8 @@ class engine:
         return word
 
     def _pl_special_adjective(
-        self, word: str, count: Optional[Union[str, int]] = None
-    ) -> Union[str, bool]:
+        self, word: str, count: str | int | None = None
+    ) -> str | bool:
         count = self.get_count(count)
 
         if count == 1:
@@ -3115,12 +3068,12 @@ class engine:
         return False
 
     # @profile
-    def _sinoun(  # noqa: C901
+    def _sinoun(
         self,
         word: str,
-        count: Optional[Union[str, int]] = None,
-        gender: Optional[str] = None,
-    ) -> Union[str, bool]:
+        count: str | int | None = None,
+        gender: str | None = None,
+    ) -> str | bool:
         count = self.get_count(count)
 
         # DEFAULT TO PLURAL
@@ -3219,11 +3172,11 @@ class engine:
 
         if words.last in si_sb_irregular_caps:
             llen = len(words.last)
-            return "{}{}".format(word[:-llen], si_sb_irregular_caps[words.last])
+            return f"{word[:-llen]}{si_sb_irregular_caps[words.last]}"
 
         if words.last.lower() in si_sb_irregular:
             llen = len(words.last.lower())
-            return "{}{}".format(word[:-llen], si_sb_irregular[words.last.lower()])
+            return f"{word[:-llen]}{si_sb_irregular[words.last.lower()]}"
 
         dash_split = words.lowered.split("-")
         if (" ".join(dash_split[-2:])).lower() in si_sb_irregular_compound:
@@ -3443,8 +3396,7 @@ class engine:
     # ADJECTIVES
 
     def a(self, text: str, count: int = 1) -> str:
-        """
-        Return the appropriate indefinite article followed by text.
+        """Return the appropriate indefinite article followed by text.
 
         The indefinite article is either 'a' or 'an'.
 
@@ -3467,7 +3419,7 @@ class engine:
 
     an = a
 
-    def _indef_article(self, word: str, count: int) -> str:  # noqa: C901
+    def _indef_article(self, word: str, count: int) -> str:
         mycount = self.get_count(count)
 
         if mycount != 1:
@@ -3518,9 +3470,8 @@ class engine:
 
     # 2. TRANSLATE ZERO-QUANTIFIED $word TO "no plural($word)"
 
-    def no(self, text: str, count: Optional[Union[int, str]] = None) -> str:
-        """
-        If count is 0, no, zero or nil, return 'no' followed by the plural
+    def no(self, text: str, count: int | str | None = None) -> str:
+        """If count is 0, no, zero or nil, return 'no' followed by the plural
         of text.
 
         If count is one of:
@@ -3556,8 +3507,7 @@ class engine:
     # PARTICIPLES
 
     def present_participle(self, word: str) -> str:
-        """
-        Return the present participle for word.
+        """Return the present participle for word.
 
         word is the 3rd person singular verb.
 
@@ -3573,9 +3523,8 @@ class engine:
 
     # NUMERICAL INFLECTIONS
 
-    def ordinal(self, num: Union[int, str]) -> str:  # noqa: C901
-        """
-        Return the ordinal of num.
+    def ordinal(self, num: int | str) -> str:
+        """Return the ordinal of num.
 
         num can be an integer or text
 
@@ -3605,7 +3554,7 @@ class engine:
         else:
             # Mad props to Damian Conway (?) whose ordinal()
             # algorithm is type-bendy enough to foil MyPy
-            str_num: str = num  # type:	ignore[assignment]
+            str_num: str = str(num)  # type:	ignore[assignment]
             mo = ordinal_suff.search(str_num)
             if mo:
                 post = ordinal[mo.group(1)]
@@ -3732,9 +3681,9 @@ class engine:
             num = ONE_DIGIT_WORD.sub(self.unitsub, num, 1)
         return num
 
-    def number_to_words(  # noqa: C901
+    def number_to_words(
         self,
-        num: Union[int, str],
+        num: int | str,
         wantlist: bool = False,
         group: int = 0,
         comma: str = ",",
@@ -3742,10 +3691,9 @@ class engine:
         zero: str = "zero",
         one: str = "one",
         decimal: str = "point",
-        threshold: Optional[int] = None,
-    ) -> Union[str, List[str]]:
-        """
-        Return a number in words.
+        threshold: int | None = None,
+    ) -> str | list[str]:
+        """Return a number in words.
 
         group = 1, 2 or 3 to group numbers before turning into words
         comma: define comma
@@ -3804,7 +3752,7 @@ class engine:
         else:
             chunks = [num]
 
-        first: Union[int, str, bool] = 1
+        first: int | str | bool = 1
         loopstart = 0
 
         if chunks[0] == "":
@@ -3885,15 +3833,14 @@ class engine:
 
     def join(
         self,
-        words: Optional[Sequence[str]],
-        sep: Optional[str] = None,
+        words: Sequence[str] | None,
+        sep: str | None = None,
         sep_spaced: bool = True,
-        final_sep: Optional[str] = None,
+        final_sep: str | None = None,
         conj: str = "and",
         conj_spaced: bool = True,
     ) -> str:
-        """
-        Join words into a list.
+        """Join words into a list.
 
         e.g. join(['ant', 'bee', 'fly']) returns 'ant, bee, and fly'
 

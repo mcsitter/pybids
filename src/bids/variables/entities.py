@@ -2,6 +2,7 @@
 
 from collections import namedtuple
 from itertools import chain
+from typing import Literal, overload
 
 import pandas as pd
 
@@ -23,6 +24,9 @@ class Node:
         entity value extracted from the filename via layout.
 
     """
+
+    duration: float
+    repetition_time: float
 
     def __init__(self, level, entities):
         self.level = level.lower()
@@ -69,7 +73,7 @@ class RunNode(Node):
 
     """
 
-    def __init__(self, entities, image_file, duration, repetition_time, n_vols):
+    def __init__(self, entities, image_file, duration: float, repetition_time: float, n_vols):
         self.image_file = image_file
         self.duration = duration
         self.repetition_time = repetition_time
@@ -86,7 +90,7 @@ class RunNode(Node):
 
 
 # Stores key information for each Run.
-RunInfo_ = namedtuple('RunInfo', ['entities', 'duration', 'tr', 'image', 'n_vols'])
+RunInfo_ = namedtuple('RunInfo_', ['entities', 'duration', 'tr', 'image', 'n_vols'])
 
 
 # Wrap with class to provide docstring
@@ -95,8 +99,6 @@ class RunInfo(RunInfo_):
 
     Properties include 'entities', 'duration', 'tr', and 'image', 'n_vols'.
     """
-
-    pass
 
 
 class NodeIndex:
@@ -169,7 +171,11 @@ class NodeIndex:
 
         return results
 
-    def get_nodes(self, level=None, entities=None, strict=False):
+    @overload
+    def get_nodes(self, level: Literal['run'], entities=None, strict=False) -> list[RunNode]: ...
+    @overload
+    def get_nodes(self, level: str | None = None, entities=None, strict=False) -> list[Node]: ...
+    def get_nodes(self, level: str | None = None, entities=None, strict=False):
         """Retrieves all nodes that match the specified criteria.
 
         Parameters
@@ -200,8 +206,8 @@ class NodeIndex:
         match_ents = set(entities.keys())
         common_cols = list(match_ents & set(self.index.columns))
 
-        if strict and match_ents - common_cols:
-            raise ValueError('Invalid entities: ', match_ents - common_cols)
+        if strict and match_ents - set(common_cols):
+            raise ValueError('Invalid entities: ', match_ents - set(common_cols))
 
         if not common_cols:
             return self.nodes
@@ -210,7 +216,7 @@ class NodeIndex:
         query = []
         for col in common_cols:
             oper = 'in' if isinstance(entities[col], (list, tuple)) else '=='
-            q = f'{col} {oper} {repr(entities[col])}'
+            q = f'{col} {oper} {entities[col]!r}'
             query.append(q)
         query = ' and '.join(query)
 
@@ -233,6 +239,12 @@ class NodeIndex:
         rows = rows.sort_values(sort_cols)
         inds = rows['node_index'].astype(int)
         return [self.nodes[i] for i in inds]
+
+    @overload
+    def create_node(self, level: Literal['run'], entities: dict, *args, **kwargs) -> RunNode: ...
+
+    @overload
+    def create_node(self, level: str, entities: dict, *args, **kwargs) -> Node: ...
 
     def create_node(self, level, entities, *args, **kwargs):
         """Creates a new child Node.
@@ -268,7 +280,7 @@ class NodeIndex:
         self.index = pd.concat([self.index, node_row], ignore_index=True)
         return node
 
-    def get_or_create_node(self, level, entities, *args, **kwargs):
+    def get_or_create_node(self, level, entities, *args, **kwargs) -> Node:
         """Retrieves a child Node based on the specified criteria, creating a
         new Node if necessary.
 

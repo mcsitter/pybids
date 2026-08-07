@@ -131,7 +131,7 @@ def _get_nvols(img_f):
 
 def _load_time_variables(  # noqa: D417
     layout,
-    dataset=None,
+    dataset: NodeIndex | None = None,
     columns=None,
     scan_length=None,
     drop_na=True,
@@ -194,10 +194,9 @@ def _load_time_variables(  # noqa: D417
 
     if dataset is None:
         dataset = NodeIndex()
-
     selectors['datatype'] = 'func'
     selectors['suffix'] = 'bold'
-    exts = selectors.pop('extension', ['.nii', '.nii.gz', '.func.gii', '.dtseries.nii'])
+    exts: list[str] = selectors.pop('extension', ['.nii', '.nii.gz', '.func.gii', '.dtseries.nii'])
     images = layout.get(return_type='object', scope=scope, extension=exts, **selectors)
 
     if not images:
