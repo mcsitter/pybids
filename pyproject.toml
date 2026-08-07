@@ -76,6 +76,15 @@ tutorial = [
   "jupyter_client",
   "ipykernel",
 ]
+typing = [
+  "ty",
+  "altair",
+  "call",
+  "duecredit",
+  "graphviz",
+  "jinja2",
+  "statsmodels",
+]
 # Aliases
 docs = ["pybids[doc]"]
 tests = ["pybids[test]"]
@@ -117,3 +126,9 @@ source = [
 
 [tool.coverage.report]
 include = ["src/*", "tests/*"]
+
+[tool.ty.src]
+exclude = [
+    "**/tests/**",
+    "**/conftest.py",
+]
