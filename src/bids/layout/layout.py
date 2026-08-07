@@ -5,6 +5,7 @@ import difflib
 import enum
 import json
 import re
+import sys
 import warnings
 from collections import defaultdict
 from functools import lru_cache, partial
@@ -32,9 +33,9 @@ from .utils import BIDSMetadata, parse_file_entities
 from .validation import EXAMPLE_DERIVATIVES_DESCRIPTION, validate_derivative_path, validate_root
 from .writing import build_path, write_to_file
 
-try:
+if sys.version_info >= (3, 11):
     from operator import call
-except ImportError:  # PY310
+else:
 
     def call(func, *args, **kwargs):
         return func(*args, **kwargs)
