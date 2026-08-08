@@ -130,7 +130,7 @@ from sphinx.domains.python import PythonDomain  # noqa: E402
 class ManglingDomainBase:  # noqa: D101
     directive_mangling_map = {}
 
-    def __init__(self, *a, **kw):
+    def __init__(self, *a, **kw) -> None:
         super().__init__(*a, **kw)
         self.wrap_mangling_directives()
 

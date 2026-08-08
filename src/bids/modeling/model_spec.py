@@ -68,7 +68,7 @@ class GLMMSpec(ModelSpec):
         family=None,
         link=None,
         priors=None,
-    ):
+    ) -> None:
         self.terms = {}
         self.family = family
         self.link = link
@@ -85,7 +85,7 @@ class GLMMSpec(ModelSpec):
         if Z is not None:
             self.build_variance_components(Z, groups, sigma)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<{self.__class__.__name__}{[term.name for term in self.fixed_terms]}'>"
 
     def set_priors(self, fixed=None, random=None) -> None:  # noqa: D102
@@ -301,7 +301,7 @@ class Term:
 
     """
 
-    def __init__(self, name, values, categorical=False, prior=None, metadata=None):
+    def __init__(self, name, values, categorical=False, prior=None, metadata=None) -> None:
         self.name = name
         self.values = values
         self.categorical = categorical
@@ -328,7 +328,7 @@ class VarComp(Term):
 
     """
 
-    def __init__(self, name, values, prior=None, metadata=None):
+    def __init__(self, name, values, prior=None, metadata=None) -> None:
         super().__init__(name, values, categorical=True, prior=prior, metadata=metadata)
         self.index_vec = self.dummies_to_vec(values)
 
@@ -374,6 +374,6 @@ class Prior:
 
     """
 
-    def __init__(self, name, **kwargs):
+    def __init__(self, name, **kwargs) -> None:
         self.name = name
         self.kwargs = kwargs

@@ -34,7 +34,7 @@ class ConnectionManager:  # noqa: D101
         reset_database: bool = False,
         config=None,
         init_args=None,
-    ):
+    ) -> None:
         self.database_file = get_database_file(database_path)
 
         # Determine if file exists before we create it in _get_engine()
@@ -101,7 +101,7 @@ class ConnectionManager:  # noqa: D101
         # work when using an in-memory SQLite DB, but fails when using a file.
         # For more details, see https://stackoverflow.com/questions/12461814/
         @listens_for(engine, 'begin')
-        def do_begin(conn):
+        def do_begin(conn) -> None:
             conn.connection.create_function('regexp', 2, regexp)
 
         return engine

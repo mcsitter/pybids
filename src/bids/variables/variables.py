@@ -37,13 +37,13 @@ class BIDSVariable(metaclass=ABCMeta):
     _property_columns: set[str] = set()
     index: pd.DataFrame
 
-    def __init__(self, name, values, source):
+    def __init__(self, name, values, source) -> None:
         self.name = name
         self.values = values
         self.source = source
         self.entities = self._extract_entities()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<{self.__class__.__name__}(name='{self.name}', source='{self.source}')>"
 
     def clone(self, data=None, **kwargs) -> Self:
@@ -307,7 +307,7 @@ class SimpleVariable(BIDSVariable):
 
     _entity_columns = {'condition', 'amplitude'}
 
-    def __init__(self, name, data, source, **kwargs):
+    def __init__(self, name, data, source, **kwargs) -> None:
         ent_cols = list(set(data.columns) - self._entity_columns)
         self.index = data.loc[:, ent_cols]
 
@@ -407,7 +407,7 @@ class SparseRunVariable(SimpleVariable):
             'events', 'physio', 'stim', 'regressors', 'scans', 'sessions', 'participants', 'beh'
         ],
         **kwargs,
-    ):
+    ) -> None:
         if isinstance(run_info, RunInfo):
             run_info = [run_info]
         if not isinstance(run_info, list):
@@ -532,7 +532,7 @@ class DenseRunVariable(BIDSVariable):
 
     sampling_rate: float
 
-    def __init__(self, name, values, run_info, source, sampling_rate):
+    def __init__(self, name, values, run_info, source, sampling_rate) -> None:
         values = pd.DataFrame(values)
 
         if not isinstance(sampling_rate, (float, int)):

@@ -12,7 +12,7 @@ from ..utils import listify, make_bidsfile
 class BIDSMetadata(dict):
     """Metadata dictionary that reports the associated file on lookup failures."""
 
-    def __init__(self, source_file):
+    def __init__(self, source_file) -> None:
         self._source_file = source_file
         super().__init__()
 
@@ -65,7 +65,7 @@ class PaddedInt(int):
     '3'
     """
 
-    def __init__(self, val):
+    def __init__(self, val) -> None:
         self.sval = str(val)
 
     def __eq__(self, val):
@@ -77,13 +77,13 @@ class PaddedInt(int):
             # and allow val to determine the return type
             return val == self
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.sval
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.sval
 
-    def __format__(self, format_spec):
+    def __format__(self, format_spec) -> str:
         """Format a padded integer
 
         If a format spec can be used on a string, apply it to the zero-padded string.

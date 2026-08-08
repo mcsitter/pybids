@@ -12,7 +12,7 @@ from warnings import warn
 class Reader:
     """A line-based string reader."""
 
-    def __init__(self, data):
+    def __init__(self, data) -> None:
         """Parameters  # noqa: D301
         ----------
         data : str
@@ -63,7 +63,7 @@ class Reader:
     def read_to_next_empty_line(self) -> list[str]:  # noqa: D102
         self.seek_next_non_empty_line()
 
-        def is_empty(line):
+        def is_empty(line) -> bool:
             return not line.strip()
 
         return self.read_to_condition(is_empty)
@@ -85,7 +85,7 @@ class Reader:
 
 
 class NumpyDocString(collections.abc.Mapping):  # noqa: D101
-    def __init__(self, docstring, config={}):  # noqa: B006
+    def __init__(self, docstring, config={}) -> None:  # noqa: B006
         docstring = textwrap.dedent(docstring).split('\n')
 
         self._doc = Reader(docstring)
@@ -114,7 +114,7 @@ class NumpyDocString(collections.abc.Mapping):  # noqa: D101
     def __getitem__(self, key):
         return self._parsed_data[key]
 
-    def __setitem__(self, key, val):
+    def __setitem__(self, key, val) -> None:
         if key not in self._parsed_data:
             warn('Unknown section %s' % key)  # noqa: B028, UP031
         else:
@@ -123,7 +123,7 @@ class NumpyDocString(collections.abc.Mapping):  # noqa: D101
     def __iter__(self):
         return iter(self._parsed_data)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._parsed_data)
 
     def _is_at_section(self):
@@ -219,7 +219,7 @@ class NumpyDocString(collections.abc.Mapping):  # noqa: D101
                     return g[2], g[1]
             raise ValueError('%s is not a item name' % text)  # noqa: UP031
 
-        def push_item(name, rest):
+        def push_item(name, rest) -> None:
             if not name:
                 return
             name, role = parse_item_name(name)
@@ -273,7 +273,7 @@ class NumpyDocString(collections.abc.Mapping):  # noqa: D101
                 out[line[1]] = strip_each_in(line[2].split(','))
         return out
 
-    def _parse_summary(self):
+    def _parse_summary(self) -> None:
         """Grab signature (if given) and summary"""
         if self._is_at_section():
             return
@@ -294,7 +294,7 @@ class NumpyDocString(collections.abc.Mapping):  # noqa: D101
         if not self._is_at_section():
             self['Extended Summary'] = self._read_to_next_section()
 
-    def _parse(self):
+    def _parse(self) -> None:
         self._doc.reset()
         self._parse_summary()
 
@@ -416,7 +416,7 @@ class NumpyDocString(collections.abc.Mapping):  # noqa: D101
             out += ['   :%s: %s' % (section, ', '.join(references))]  # noqa: UP031
         return out
 
-    def __str__(self, func_role=''):
+    def __str__(self, func_role='') -> str:
         out = []
         out += self._str_signature()
         out += self._str_summary()
@@ -458,7 +458,7 @@ def header(text, style='-') -> str:  # noqa: D103
 
 
 class FunctionDoc(NumpyDocString):  # noqa: D101
-    def __init__(self, func, role='func', doc=None, config={}):  # noqa: B006
+    def __init__(self, func, role='func', doc=None, config={}) -> None:  # noqa: B006
         self._f = func
         self._role = role  # e.g. "func" or "meth"
 
@@ -488,7 +488,7 @@ class FunctionDoc(NumpyDocString):  # noqa: D101
             func = self._f
         return func, func_name
 
-    def __str__(self):
+    def __str__(self) -> str:
         out = ''
 
         func, func_name = self.get_func()
@@ -508,7 +508,7 @@ class FunctionDoc(NumpyDocString):  # noqa: D101
 class ClassDoc(NumpyDocString):  # noqa: D101
     extra_public_methods = ['__call__']
 
-    def __init__(self, cls, doc=None, modulename='', func_doc=FunctionDoc, config={}):  # noqa: B006
+    def __init__(self, cls, doc=None, modulename='', func_doc=FunctionDoc, config={}) -> None:  # noqa: B006
         if not inspect.isclass(cls) and cls is not None:
             raise ValueError('Expected a class or None, but got %r' % cls)  # noqa: UP031
         self._cls = cls
@@ -575,7 +575,7 @@ class ClassDoc(NumpyDocString):  # noqa: D101
             )
         ]
 
-    def _is_show_member(self, name):
+    def _is_show_member(self, name) -> bool:
         if self.show_inherited_members:
             return True  # show all class members
         if name not in self._cls.__dict__:

@@ -89,7 +89,7 @@ def get_option(
     return _settings[key]
 
 
-def from_file(filenames, error_on_missing=True):
+def from_file(filenames, error_on_missing=True) -> None:
     """Load package-wide settings from specified file(s).
 
     Args:
@@ -108,7 +108,7 @@ def from_file(filenames, error_on_missing=True):
             raise ValueError("Config file '%s' does not exist." % f)  # noqa: UP031
 
 
-def reset_options(update_from_file=False):
+def reset_options(update_from_file=False) -> None:
     """Reset all options to the package defaults.
 
     Args:
@@ -122,7 +122,7 @@ def reset_options(update_from_file=False):
         _update_from_standard_locations()
 
 
-def _update_from_standard_locations():
+def _update_from_standard_locations() -> None:
     """Check standard locations for config files and update settings if found.
     Order is user's home dir, environment variable ($PYBIDS_CONFIG), and then
     current directory--with later files taking precedence over earlier ones.

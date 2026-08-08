@@ -42,7 +42,7 @@ class BIDSReport:
 
     """
 
-    def __init__(self, layout, config=None):
+    def __init__(self, layout, config=None) -> None:
         self.layout = layout
         if config is None:
             config = op.join(

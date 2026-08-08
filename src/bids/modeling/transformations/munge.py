@@ -110,7 +110,7 @@ class Delete(Transformation):
     _return_type = 'none'
     _allow_categorical = ('variables',)
 
-    def _transform(self, variables):
+    def _transform(self, variables) -> None:
         variables = set([v.name for v in variables])  # noqa: C403
         self.collection.variables = {
             k: v for k, v in self.collection.variables.items() if k not in variables
@@ -216,7 +216,7 @@ class Group(Transformation):
     _input_type = 'variable'
     _return_type = 'none'
 
-    def _transform(self, variables, name):
+    def _transform(self, variables, name) -> None:
         if name in self.variables:
             raise ValueError(
                 f"Variable group name '{name}' conflicts with an existing variable name!"
@@ -284,7 +284,7 @@ class Select(Transformation):
     _return_type = 'none'
     _allow_categorical = ('variables',)
 
-    def _transform(self, variables):
+    def _transform(self, variables) -> None:
         self.collection.variables = {v.name: v for v in variables}
 
 

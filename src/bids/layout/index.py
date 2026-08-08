@@ -135,7 +135,7 @@ class BIDSLayoutIndexer:
         index_metadata: bool = True,
         config_filename: str = 'layout_config.json',
         **filters,
-    ):
+    ) -> None:
         self.ignore = ignore
         self.force_index = force_index
         self.index_metadata = index_metadata
@@ -303,7 +303,7 @@ class BIDSLayoutIndexer:
 
         return bf, tag_dicts
 
-    def _index_metadata(self):
+    def _index_metadata(self) -> None:
         """Index metadata for all files in the BIDS dataset."""
         filters = self.filters
 

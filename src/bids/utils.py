@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 class frozendict(_frozendict):
     """A hashable dictionary type."""
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Override frozendict representation."""
         return repr({k: v for k, v in self.items()})  # noqa: C416
 

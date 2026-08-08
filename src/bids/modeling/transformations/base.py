@@ -104,7 +104,7 @@ class Transformation(metaclass=ABCMeta):  # noqa: D101
         t._setup(collection, variables, *args, **kwargs)
         return t.transform()
 
-    def _setup(self, collection, variables, *args, **kwargs):
+    def _setup(self, collection, variables, *args, **kwargs) -> None:
         """Replaces __init__ to set instance attributes because on Python
         >= 3.3, we can't override both new and init.
         """
@@ -139,7 +139,7 @@ class Transformation(metaclass=ABCMeta):  # noqa: D101
         self._expand_variable_groups()
         self._expand_variable_names()
 
-    def _expand_variable_groups(self):
+    def _expand_variable_groups(self) -> None:
         """Replace any detected variable groups with the associated lists of
         variable names.
         """
@@ -175,7 +175,7 @@ class Transformation(metaclass=ABCMeta):  # noqa: D101
         for k, arg in self.kwargs.items():
             self.kwargs[k] = _replace_arg_values(arg)
 
-    def _clone_variables(self):
+    def _clone_variables(self) -> None:
         """Deep copy all variables the transformation touches. This prevents us
         from unnecessarily overwriting existing variables.
         """
@@ -199,7 +199,7 @@ class Transformation(metaclass=ABCMeta):  # noqa: D101
                     continue
                 self._variables[v] = deepcopy(self.collection[v])
 
-    def _check_categorical_variables(self):
+    def _check_categorical_variables(self) -> None:
         """Convert categorical variables to dummy-coded indicators."""
         # Collect variable names to pass through
         pass_thru = []
@@ -358,7 +358,7 @@ class Transformation(metaclass=ABCMeta):  # noqa: D101
     def _postprocess(self, col):
         return col
 
-    def _align_variables(self, variables):
+    def _align_variables(self, variables) -> None:
         """Checks whether the specified variables have aligned indexes. This
         implies either that all variables are dense, or that all variables are
         sparse and have exactly the same onsets and durations. If variables are
@@ -368,7 +368,7 @@ class Transformation(metaclass=ABCMeta):  # noqa: D101
         if self._aligned_required is None or self._aligned_required == 'none':
             return
 
-        def _align(variables):
+        def _align(variables) -> None:
             # If any variable is dense, all variables must be dense
             sparse = [c for c in variables if isinstance(c, SparseRunVariable)]
             if len(sparse) < len(variables):
@@ -452,7 +452,7 @@ class TransformerManager:
 
     """
 
-    def __init__(self, default=None, keep_history=True):
+    def __init__(self, default=None, keep_history=True) -> None:
         self.transformations = {}
         if default in (None, 'pybids-transforms-v1'):
             # Default to PyBIDS transformations

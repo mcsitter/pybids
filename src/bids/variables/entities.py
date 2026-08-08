@@ -30,7 +30,7 @@ class Node:
     duration: float
     repetition_time: float
 
-    def __init__(self, level, entities):
+    def __init__(self, level, entities) -> None:
         self.level = level.lower()
         self.entities = entities
         if self.entities is not None:
@@ -87,7 +87,9 @@ class RunNode(Node):
 
     """
 
-    def __init__(self, entities, image_file, duration: float, repetition_time: float, n_vols):
+    def __init__(
+        self, entities, image_file, duration: float, repetition_time: float, n_vols
+    ) -> None:
         self.image_file = image_file
         self.duration = duration
         self.repetition_time = repetition_time
@@ -106,7 +108,7 @@ class RunNode(Node):
 class NodeIndex:
     """Represents the top level in a BIDS hierarchy."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.index = pd.DataFrame()
         self.nodes = []

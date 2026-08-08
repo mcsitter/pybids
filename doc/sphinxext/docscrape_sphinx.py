@@ -8,7 +8,7 @@ from docscrape import ClassDoc, FunctionDoc, NumpyDocString
 
 
 class SphinxDocString(NumpyDocString):  # noqa: D101
-    def __init__(self, docstring, config={}):  # noqa: B006
+    def __init__(self, docstring, config={}) -> None:  # noqa: B006
         self.use_plots = config.get('use_plots', False)
         NumpyDocString.__init__(self, docstring, config=config)
 
@@ -174,7 +174,7 @@ class SphinxDocString(NumpyDocString):  # noqa: D101
         else:
             return self._str_section('Examples')
 
-    def __str__(self, indent=0, func_role='obj'):
+    def __str__(self, indent=0, func_role='obj') -> str:
         out = []
         out += self._str_signature()
         out += self._str_index() + ['']
@@ -194,19 +194,19 @@ class SphinxDocString(NumpyDocString):  # noqa: D101
 
 
 class SphinxFunctionDoc(SphinxDocString, FunctionDoc):  # noqa: D101
-    def __init__(self, obj, doc=None, config={}):  # noqa: B006
+    def __init__(self, obj, doc=None, config={}) -> None:  # noqa: B006
         self.use_plots = config.get('use_plots', False)
         FunctionDoc.__init__(self, obj, doc=doc, config=config)
 
 
 class SphinxClassDoc(SphinxDocString, ClassDoc):  # noqa: D101
-    def __init__(self, obj, doc=None, func_doc=None, config={}):  # noqa: B006
+    def __init__(self, obj, doc=None, func_doc=None, config={}) -> None:  # noqa: B006
         self.use_plots = config.get('use_plots', False)
         ClassDoc.__init__(self, obj, doc=doc, func_doc=None, config=config)
 
 
 class SphinxObjDoc(SphinxDocString):  # noqa: D101
-    def __init__(self, obj, doc=None, config={}):  # noqa: B006
+    def __init__(self, obj, doc=None, config={}) -> None:  # noqa: B006
         self._f = obj
         SphinxDocString.__init__(self, doc, config=config)
 

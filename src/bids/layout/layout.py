@@ -59,7 +59,7 @@ Scope = Literal['all', 'derivatives', 'raw', 'self'] | str | list[str]
 
 
 class Sentinel:
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__class__.__name__
 
 
@@ -144,7 +144,7 @@ class BIDSLayout:
         indexer=None,
         is_derivative: bool = False,
         **indexer_kwargs,
-    ):
+    ) -> None:
         if absolute_paths is not RemovedOption:
             msg = (
                 'The absolute_paths argument is no longer supported. Use the '

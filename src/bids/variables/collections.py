@@ -90,7 +90,7 @@ class BIDSVariableCollection:
 
     variables: dict[str, BIDSVariable]
 
-    def __init__(self, variables: list[BIDSVariable], name: str | None = None):
+    def __init__(self, variables: list[BIDSVariable], name: str | None = None) -> None:
         self.name = name
 
         if not variables:
@@ -291,7 +291,7 @@ class BIDSVariableCollection:
         clone.variables = {k: v.clone() for (k, v) in self.variables.items()}
         return clone
 
-    def _index_entities(self):
+    def _index_entities(self) -> None:
         """Sets current instance's entities based on the existing index.
 
         Notes
@@ -320,7 +320,7 @@ class BIDSVariableCollection:
             f"No variable named '{var}' found in this collection. Available names are {keys}."
         )
 
-    def __setitem__(self, var, obj):
+    def __setitem__(self, var, obj) -> None:
         # Ensure name matches collection key, but raise warning if needed.
         if obj.name != var:
             warnings.warn(
@@ -368,7 +368,7 @@ class BIDSVariableCollection:
             return [self.variables[name] for name in names]
         return names
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'<{self.__class__.__name__}{sorted(list(self.variables.keys()))}>'  # noqa: C414
 
 
@@ -394,7 +394,7 @@ class BIDSRunVariableCollection(BIDSVariableCollection):
 
     variables: dict[str, SparseRunVariable | DenseRunVariable]
 
-    def __init__(self, variables, sampling_rate=None):
+    def __init__(self, variables, sampling_rate=None) -> None:
         # Don't put the default value in signature because None is passed from
         # several places and we don't want multiple conflicting defaults.
         if sampling_rate:

@@ -66,7 +66,7 @@ class LayoutInfo(Base):
     _derivatives: str = Column(String)
     _config: str = Column(String)
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         init_args = self._sanitize_init_args(kwargs)
         raw_cols = ['root']
         json_cols = ['derivatives', 'config']
@@ -81,7 +81,7 @@ class LayoutInfo(Base):
                 setattr(self, '_' + col, json_data)
 
     @reconstructor
-    def _init_on_load(self):
+    def _init_on_load(self) -> None:
         if self.absolute_paths is False:
             warnings.warn(
                 'PyBIDS database loaded with deprecated `absolute_paths` '
@@ -117,7 +117,7 @@ class LayoutInfo(Base):
 
         return kwargs
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'<LayoutInfo {self.root}>'
 
 
@@ -156,7 +156,7 @@ class Config(Base):
         entities=None,
         default_path_patterns: list[str] | None = None,
         session=None,
-    ):
+    ) -> None:
         self.name = name
         self.default_path_patterns = default_path_patterns
         self._default_path_patterns = json.dumps(default_path_patterns)
@@ -174,7 +174,7 @@ class Config(Base):
                     session.commit()
 
     @reconstructor
-    def _init_on_load(self):
+    def _init_on_load(self) -> None:
         self.default_path_patterns = json.loads(self._default_path_patterns)
 
     @classmethod
@@ -456,7 +456,7 @@ class Config(Base):
 
         return entity_values
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'<Config {self.name}>'
 
 
@@ -488,7 +488,7 @@ class BIDSFile(Base):
 
     __mapper_args__ = {'polymorphic_on': class_, 'polymorphic_identity': 'file'}
 
-    def __init__(self, filename):
+    def __init__(self, filename) -> None:
         self.path = str(filename)
         self.filename = self._path.name
         self.dirname = str(self._path.parent)
@@ -502,7 +502,7 @@ class BIDSFile(Base):
     def _dirname(self):
         return UPath(str(self.dirname))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<{self.__class__.__name__} filename='{self.path}'>"
 
     def __fspath__(self):
@@ -837,7 +837,7 @@ class Entity(Base):
         mandatory: bool = False,
         directory: str | None = None,
         dtype: DType = 'str',
-    ):
+    ) -> None:
         self.name = name
         self.pattern: str | None = pattern
         self.mandatory = mandatory
@@ -849,7 +849,7 @@ class Entity(Base):
 
         self._init_on_load()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'<Entity {self.name} (pattern={self.pattern}, dtype={self.dtype})>'
 
     @reconstructor
@@ -989,7 +989,7 @@ class Tag(Base):
         value,
         dtype: str | type | None = None,
         is_metadata: bool = False,
-    ):
+    ) -> None:
         data = _create_tag_dict(file, entity, value, dtype, is_metadata)
 
         self.file_path = data['file_path']
@@ -1006,7 +1006,7 @@ class Tag(Base):
             self.dtype = converter
             self.value = converter(self._value)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         msg = '<Tag file:{!r} entity:{!r} value:{!r}>'
         return msg.format(self.file_path, self.entity_name, self.value)
 

@@ -115,7 +115,7 @@ class BIDSStatsModelsGraph:
 
     """
 
-    def __init__(self, layout, model):
+    def __init__(self, layout, model) -> None:
         if not isinstance(layout, BIDSLayout):
             layout = BIDSLayout(layout)
         self.layout = layout
@@ -124,7 +124,7 @@ class BIDSStatsModelsGraph:
         self.edges = self._load_edges(self.model, self.nodes)
         self._root_node = self.model.get('root', list(self.nodes.values())[0])
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<{self.__class__.__name__}[{{name='{self.model['name']}', description='{self.model['description']}', ... }}]>"  # noqa: E501
 
     def __getitem__(self, key):
@@ -290,7 +290,7 @@ class BIDSStatsModelsGraph:
         _run_node_recursive(self.root_node, filters=entities, **kwargs)
 
 
-def _run_node_recursive(node, inputs=None, filters=None, **kwargs):
+def _run_node_recursive(node, inputs=None, filters=None, **kwargs) -> None:
     """Run a node recursively, storing outputs in place as
     BIDSStatsModelsNode.outputs_.
 
@@ -353,7 +353,7 @@ class BIDSStatsModelsNode:
         transformations=None,
         contrasts=None,
         dummy_contrasts=False,
-    ):
+    ) -> None:
         self.level = level.lower()
         self.name = name
         self.model = model
@@ -383,7 +383,7 @@ class BIDSStatsModelsNode:
             # though.
             pass
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'<{self.__class__.__name__}(level={self.level}, name={self.name})>'
 
     @staticmethod
@@ -736,7 +736,7 @@ class BIDSStatsModelsNodeOutput:
         *,
         transformation_history=False,
         node_reports=False,
-    ):
+    ) -> None:
         """Initialize a new BIDSStatsModelsNodeOutput instance.
         Applies the node's model to the specified collections and inputs, including
         applying transformations and generating final model specs and design matrices (X).
@@ -1001,5 +1001,5 @@ class BIDSStatsModelsNodeOutput:
         """Return design matrix via the current ModelSpec."""
         return self.model_spec.X
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'<{self.__class__.__name__}(name={self.node.name}, entities={self.entities})>'

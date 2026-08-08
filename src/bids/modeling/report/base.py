@@ -102,7 +102,7 @@ def _build_report_dict(graph):
     return report
 
 
-def _write_report(report_dict, out_dir, template_path=None):
+def _write_report(report_dict, out_dir, template_path=None) -> None:
     try:
         import jinja2
     except ImportError:
