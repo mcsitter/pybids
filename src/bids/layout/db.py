@@ -107,7 +107,7 @@ class ConnectionManager:  # noqa: D101
         return engine
 
     @classmethod
-    def exists(cls, database_path):  # noqa: D102
+    def exists(cls, database_path) -> bool:  # noqa: D102
         database_file = get_database_file(database_path)
         return database_file is not None and database_file.exists()
 

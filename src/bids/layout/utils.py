@@ -2,6 +2,7 @@
 
 from typing import Literal, overload
 
+from typing_extensions import Any
 from upath import UPath as Path
 
 from .. import config as cf
@@ -16,7 +17,7 @@ class BIDSMetadata(dict):
         self._source_file = source_file
         super().__init__()
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> Any:  # noqa: ANN401
         try:
             return super().__getitem__(key)
         except KeyError:
@@ -68,7 +69,7 @@ class PaddedInt(int):
     def __init__(self, val) -> None:
         self.sval = str(val)
 
-    def __eq__(self, val):
+    def __eq__(self, val) -> bool:
         try:
             return val == self.sval or super().__eq__(val)
         except ValueError:
@@ -94,7 +95,7 @@ class PaddedInt(int):
         except ValueError:
             return super().__format__(format_spec)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return super().__hash__()
 
 

@@ -6,6 +6,7 @@ import inspect
 import pydoc
 import re
 import textwrap
+from collections.abc import Iterator
 from warnings import warn
 
 
@@ -26,7 +27,7 @@ class Reader:
 
         self.reset()
 
-    def __getitem__(self, n):
+    def __getitem__(self, n) -> str:
         return self._str[n]
 
     def reset(self) -> None:  # noqa: D102
@@ -111,7 +112,7 @@ class NumpyDocString(collections.abc.Mapping):  # noqa: D101
 
         self._parse()
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> list | str | dict:
         return self._parsed_data[key]
 
     def __setitem__(self, key, val) -> None:
@@ -120,7 +121,7 @@ class NumpyDocString(collections.abc.Mapping):  # noqa: D101
         else:
             self._parsed_data[key] = val
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator:
         return iter(self._parsed_data)
 
     def __len__(self) -> int:

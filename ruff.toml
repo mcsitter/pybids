@@ -44,6 +44,7 @@ extend-select = [
   "Q",    # quotes
   "ANN002",  # args type annotation missing
   "ANN205",  # typing-annotations
+  "ANN206",  # typing-annotations
   "ANN401",  # untyped-annotation
 ]
 ignore = [

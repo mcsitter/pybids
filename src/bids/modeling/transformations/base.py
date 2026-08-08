@@ -101,7 +101,7 @@ class Transformation(metaclass=ABCMeta):  # noqa: D101
     # every input variable.
     _sync_kwargs = True
 
-    def __new__(cls, collection, variables, *args: object, **kwargs):  # noqa: D102
+    def __new__(cls, collection, variables, *args: object, **kwargs) -> None:  # noqa: D102
         t = super().__new__(cls)
         t._setup(collection, variables, *args, **kwargs)
         return t.transform()

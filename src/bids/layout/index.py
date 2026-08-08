@@ -13,7 +13,7 @@ from upath import UPath as Path
 
 from ..exceptions import BIDSConflictingValuesError
 from ..utils import listify, make_bidsfile
-from .models import Config, Entity, FileAssociation, Tag, _create_tag_dict
+from .models import BIDSFile, Config, Entity, FileAssociation, Tag, _create_tag_dict
 from .validation import validate_indexing_args
 
 if TYPE_CHECKING:
@@ -150,7 +150,7 @@ class BIDSLayoutIndexer:
         self._include_patterns = None
         self._exclude_patterns = None
 
-    def __call__(self, layout: 'BIDSLayout'):  # noqa: D102
+    def __call__(self, layout: 'BIDSLayout') -> None:  # noqa: D102
         self._layout = layout
         self._config = list(layout.config.values())
 
@@ -202,7 +202,9 @@ class BIDSLayoutIndexer:
         to_check = to_check.as_posix()
         return self.validator.is_bids(to_check)
 
-    def _index_dir(self, path: Path, config, force=None):
+    def _index_dir(
+        self, path: Path, config, force=None
+    ) -> tuple[list[BIDSFile], list[dict[str, str]]]:
         root_path = Path(self._layout._root.path)  # drops the uri prefix if it is there
         abs_path = root_path / Path(path.path).relative_to(root_path)
 

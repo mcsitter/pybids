@@ -127,7 +127,7 @@ class BIDSStatsModelsGraph:
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}[{{name='{self.model['name']}', description='{self.model['description']}', ... }}]>"  # noqa: E501
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> BIDSStatsModelsNode:
         """Alias for get_node(key)."""
         return self.get_node(key)
 

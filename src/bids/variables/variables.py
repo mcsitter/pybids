@@ -184,7 +184,7 @@ class BIDSVariable(metaclass=ABCMeta):
 
     @classmethod
     @abstractmethod
-    def _merge(cls, variables, name, **kwargs):
+    def _merge(cls, variables: list[T], name, **kwargs) -> T:
         pass
 
     def get_grouper(self, groupby='run') -> pd.Series:
@@ -349,7 +349,7 @@ class SimpleVariable(BIDSVariable):
         return subsets
 
     @classmethod
-    def _merge(cls, variables, name, **kwargs) -> Self:
+    def _merge(cls, variables, name, **kwargs) -> 'SimpleVariable':
         dfs = [v.to_df() for v in variables]
         data = pd.concat(dfs, axis=0, sort=True).reset_index(drop=True)
         data = data.rename(columns={name: 'amplitude'})
@@ -505,7 +505,7 @@ class SparseRunVariable(SimpleVariable):
         return dict(entities, **base_ents)
 
     @classmethod
-    def _merge(cls, variables, name, **kwargs):
+    def _merge(cls, variables, name, **kwargs) -> SimpleVariable:
         run_info = list(chain(*[v.run_info for v in variables]))
         return super()._merge(variables, name, run_info=run_info, **kwargs)
 
@@ -705,7 +705,7 @@ class DenseRunVariable(BIDSVariable):
         return df
 
     @classmethod
-    def _merge(cls, variables, name, sampling_rate=None, **kwargs):
+    def _merge(cls, variables, name, sampling_rate=None, **kwargs) -> 'DenseRunVariable':
         if not isinstance(sampling_rate, int):
             rates = set([v.sampling_rate for v in variables])  # noqa: C403
             if len(rates) == 1:

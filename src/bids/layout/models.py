@@ -7,6 +7,7 @@ import os
 import re
 import warnings
 from collections import UserDict
+from collections.abc import Generator
 from copy import deepcopy
 from functools import lru_cache
 from itertools import chain
@@ -28,6 +29,7 @@ try:
 except ImportError:  # sqlalchemy < 1.4 # pragma: no cover
     from sqlalchemy.ext.declarative import declarative_base  # pragma: no cover
 
+import sys
 from typing import TypeAlias, TypedDict
 
 from ..config import get_option
@@ -39,6 +41,10 @@ from .writing import build_path, write_to_file
 if TYPE_CHECKING:
     from nibabel.filebasedimages import FileBasedImage
 
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 DTypeName: TypeAlias = Literal['bool', 'float', 'int', 'str', 'json']
 DType: TypeAlias = type | DTypeName
 
@@ -178,7 +184,7 @@ class Config(Base):
         self.default_path_patterns = json.loads(self._default_path_patterns)
 
     @classmethod
-    def load(cls, config, session=None):
+    def load(cls, config, session=None) -> Config:
         """Load a Config instance from the passed configuration data.
 
         Parameters
@@ -271,7 +277,7 @@ class Config(Base):
         return Config(session=session, **config)
 
     @classmethod
-    def _from_schema(cls, bids_version=None, schema_path=None, session=None):
+    def _from_schema(cls, bids_version=None, schema_path=None, session=None) -> Self:
         """Load config from BIDS schema.
 
         Parameters
@@ -340,7 +346,7 @@ class Config(Base):
         return config
 
     @classmethod
-    def _extract_entity_names_from_rules(cls, bids_schema):
+    def _extract_entity_names_from_rules(cls, bids_schema) -> set[str]:
         """Extract entity names directly from schema rules"""
         # Get entity names from all rule sections
         entity_names = set()
@@ -365,7 +371,9 @@ class Config(Base):
         return entity_names
 
     @classmethod
-    def _create_entities_from_schema(cls, entity_names, entity_values, bids_schema):
+    def _create_entities_from_schema(
+        cls, entity_names, entity_values, bids_schema
+    ) -> list[dict[str, str]]:
         """Create Entity objects directly from schema information."""
         entities = []
 
@@ -427,7 +435,7 @@ class Config(Base):
         return entities
 
     @classmethod
-    def _extract_entity_values_from_rules(cls, bids_schema, entity_names):
+    def _extract_entity_values_from_rules(cls, bids_schema, entity_names) -> dict[str, set[str]]:
         """Extract entity values directly from schema rules"""
         entity_values = {name: set() for name in entity_names}
         file_sections = {
@@ -505,7 +513,7 @@ class BIDSFile(Base):
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} filename='{self.path}'>"
 
-    def __fspath__(self):
+    def __fspath__(self) -> str:
         return self.path
 
     @property
@@ -865,10 +873,10 @@ class Entity(Base):
 
         self.regex = re.compile(self.pattern) if self.pattern is not None else None
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[str, None, None]:
         yield from self.unique()
 
-    def __deepcopy__(self, memo):
+    def __deepcopy__(self, memo) -> Self:
         cls = self.__class__
         result = cls.__new__(cls)
 
@@ -1073,7 +1081,7 @@ config_to_entity_map = Table(
 
 
 class DerivativeDatasets(UserDict):  # noqa: D101
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> object:
         try:
             return super().__getitem__(key)
         except KeyError:

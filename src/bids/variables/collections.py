@@ -254,12 +254,14 @@ class BIDSVariableCollection:
         return df
 
     @classmethod
-    def from_df(cls, data, entities=None, source='contrast'):  # noqa: D417
+    def from_df(
+        cls, data: pd.DataFrame, entities: pd.DataFrame | None = None, source='contrast'
+    ) -> BIDSVariableCollection:  # noqa: D417
         """Create a Collection from a pandas DataFrame.
 
         Parameters
         ----------
-        df : :obj:`pandas.DataFrame`
+        data : :obj:`pandas.DataFrame`
             The DataFrame to convert to a Collection. Each
             column will be converted to a SimpleVariable.
         entities : :obj:`pandas.DataFrame`
@@ -312,7 +314,7 @@ class BIDSVariableCollection:
             ents = {k: all_ents[k].dropna().iloc[0] for k in keep}
             self.entities = {k: v for k, v in ents.items() if pd.notnull(v)}
 
-    def __getitem__(self, var):
+    def __getitem__(self, var) -> BIDSVariable:
         if var in self.variables:
             return self.variables[var]
         keys = list(self.variables.keys())

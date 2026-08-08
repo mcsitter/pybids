@@ -246,7 +246,7 @@ class BIDSLayout:
     def root(self) -> str:  # noqa: D102
         return str(self._root)
 
-    def __getattr__(self, key):
+    def __getattr__(self, key) -> partial:
         """Dynamically inspect missing methods for get_<entity>() calls
         and return a partial function of get() if a match is found.
         """
