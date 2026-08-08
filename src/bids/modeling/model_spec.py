@@ -333,7 +333,7 @@ class VarComp(Term):
         self.index_vec = self.dummies_to_vec(values)
 
     @staticmethod
-    def dummies_to_vec(dummies):
+    def dummies_to_vec(dummies: np.ndarray) -> np.ndarray:
         """Convert dummy-coded columns to a single integer index.
 
         Parameters

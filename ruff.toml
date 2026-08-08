@@ -42,6 +42,7 @@ extend-select = [
   "ICN",  # import-conventions
   "PT",   # pytest-style
   "Q",    # quotes
+  "ANN401",  # untyped-annotation
 ]
 ignore = [
   "D105",  # undocumented-magic-method
