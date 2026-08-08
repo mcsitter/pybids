@@ -345,11 +345,11 @@ class ToDense(Transformation):
 
 
 class Resample(Transformation):
-    """Frequency concersion and resampling of variable"""
+    """Frequency conversion and resampling of variable"""
 
     _groupable = False
     _input_type = 'variable'
     _return_type = 'variable'
 
-    def _transform(self, var, sampling_rate=10):
+    def _transform(self, var: DenseRunVariable, sampling_rate: float = 10.0):
         return var.resample(sampling_rate=sampling_rate)

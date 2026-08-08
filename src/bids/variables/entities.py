@@ -265,10 +265,12 @@ class NodeIndex:
         return [self.nodes[i] for i in inds]
 
     @overload
-    def create_node(self, level: Literal['run'], entities: dict, *args, **kwargs) -> RunNode: ...
+    def create_node(
+        self, level: Literal['run'], entities: dict, *args: float, **kwargs: object
+    ) -> RunNode: ...
 
     @overload
-    def create_node(self, level: str, entities: dict, *args, **kwargs) -> Node: ...
+    def create_node(self, level: str, entities: dict, *args: float, **kwargs: object) -> Node: ...
 
     def create_node(self, level, entities, *args, **kwargs):
         """Creates a new child Node.
@@ -304,7 +306,7 @@ class NodeIndex:
         self.index = pd.concat([self.index, node_row], ignore_index=True)
         return node
 
-    def get_or_create_node(self, level, entities, *args, **kwargs) -> Node:
+    def get_or_create_node(self, level, entities, *args: float, **kwargs) -> Node:
         """Retrieves a child Node based on the specified criteria, creating a
         new Node if necessary.
 

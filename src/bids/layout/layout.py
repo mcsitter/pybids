@@ -45,7 +45,7 @@ if sys.version_info >= (3, 11):
     from operator import call
 else:
 
-    def call(func, *args, **kwargs):
+    def call(func, *args: object, **kwargs: object):
         return func(*args, **kwargs)
 
 

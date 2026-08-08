@@ -206,7 +206,7 @@ class BIDSVariable(metaclass=ABCMeta):
         grouper = self.index.loc[:, groupby]
         return grouper.apply(lambda x: '@@@'.join(x.astype(str).values), axis=1)
 
-    def apply(self, func, groupby='run', *args, **kwargs) -> pd.DataFrame:
+    def apply(self, func, groupby='run', *args: object, **kwargs: object) -> pd.DataFrame:
         """Applies the passed function to the groups defined by the groupby
         argument. Works identically to the standard pandas df.groupby() call.
 

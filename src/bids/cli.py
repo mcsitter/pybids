@@ -49,7 +49,7 @@ class Either(click.ParamType):
 
     """
 
-    def __init__(self, *types) -> None:
+    def __init__(self, *types: click.ParamType) -> None:
         self.types = types
 
     @property
