@@ -44,7 +44,9 @@ def _extract_entities(bidsfile, entities: dict[str, Entity]):
 
 
 def _check_path_matches_patterns(
-    path: Path, patterns: list[Pattern] | None, root: Path | None = None
+    path: Path,
+    patterns: list[Pattern] | None,
+    root: Path | None = None,
 ) -> bool:
     """Check if the path matches at least one of the provided patterns."""
     if not patterns:
@@ -52,8 +54,8 @@ def _check_path_matches_patterns(
 
     path = path.absolute()
     if root is not None:
-        if not isinstance(path, Path):
-            root = Path(root) / Path(path.path).relative_to(Path(root.path))
+        if isinstance(root, Path):
+            path = Path('/') / Path(path.path).relative_to(Path(root.path))
         else:
             path = Path('/') / path.relative_to(root)
 

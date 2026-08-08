@@ -21,7 +21,7 @@ def config_file():  # noqa: D103
 
 
 @pytest.fixture(scope='session')
-def testconfig(config_file):  # noqa: D103
+def testconfig(config_file) -> dict:  # noqa: D103
     return json.loads(config_file.read_text())
 
 

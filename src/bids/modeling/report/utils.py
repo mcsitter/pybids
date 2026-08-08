@@ -1,5 +1,6 @@
 import re  # noqa: D100
 import warnings
+from typing import TypeAlias
 
 import numpy as np
 import pandas as pd
@@ -149,7 +150,11 @@ def get_all_contrast_vif(node_output) -> pd.DataFrame:  # noqa: D417
     return vif_contrasts
 
 
-def deroot(val, root):  # noqa: D103
+DerootValue: TypeAlias = str | list['DerootValue'] | dict[str, 'DerootValue']
+
+
+def deroot(val: DerootValue, root: str) -> DerootValue:
+    """Remove root from strings recursively."""
     if isinstance(val, str):
         if val.startswith(root):
             idx = len(root)
@@ -160,7 +165,6 @@ def deroot(val, root):  # noqa: D103
         val = [deroot(elem, root) for elem in val]
     elif isinstance(val, dict):
         val = {key: deroot(value, root) for key, value in val.items()}
-
     return val
 
 

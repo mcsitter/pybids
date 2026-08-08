@@ -29,7 +29,7 @@ class Reader:
     def __getitem__(self, n):
         return self._str[n]
 
-    def reset(self):  # noqa: D102
+    def reset(self) -> None:  # noqa: D102
         self._l = 0  # current line nr
 
     def read(self):  # noqa: D102
@@ -40,7 +40,7 @@ class Reader:
         else:
             return ''
 
-    def seek_next_non_empty_line(self):  # noqa: D102
+    def seek_next_non_empty_line(self) -> None:  # noqa: D102
         for l in self[self._l :]:  # noqa: E741
             if l.strip():
                 break
@@ -80,7 +80,7 @@ class Reader:
         else:
             return ''
 
-    def is_empty(self):  # noqa: D102
+    def is_empty(self) -> bool:  # noqa: D102
         return not ''.join(self._str).strip()
 
 

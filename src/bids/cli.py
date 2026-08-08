@@ -2,6 +2,7 @@ import json  # noqa: D100
 import os
 from copy import deepcopy
 from pathlib import Path
+from re import Pattern
 
 import click
 
@@ -72,11 +73,11 @@ class PathOrRegex(click.ParamType):
 
     name = 'path or m/regex/'
 
-    def convert(self, value, param, ctx):  # noqa: D102
+    def convert(self, value: str, param, ctx) -> str | Pattern:  # noqa: D102
         import re
 
         if re.match(r'^m/.*/$', value):  # has form "m/<regex>/"
-            value = re.compile(value[2:-1])
+            value: Pattern[str] = re.compile(value[2:-1])
         return value
 
 

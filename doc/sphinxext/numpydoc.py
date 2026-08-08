@@ -20,6 +20,7 @@ import collections
 import inspect
 import pydoc
 import re
+from typing import TypeVar
 
 import sphinx
 
@@ -29,7 +30,7 @@ if sphinx.__version__ < '1.0.1':
 from docscrape_sphinx import SphinxDocString, get_doc_object
 
 
-def mangle_docstrings(app, what, name, obj, options, lines, reference_offset=[0]):  # noqa: B006, D103
+def mangle_docstrings(app, what, name, obj, options, lines, reference_offset=[0]) -> None:  # noqa: B006, D103
     cfg = {
         'use_plots': app.config.numpydoc_use_plots,
         'show_class_members': app.config.numpydoc_show_class_members,
@@ -97,7 +98,7 @@ def mangle_signature(app, what, name, obj, options, sig, retann):  # noqa: D103
         return sig, ''
 
 
-def setup(app, get_doc_object_=get_doc_object):  # noqa: D103
+def setup(app, get_doc_object_=get_doc_object) -> None:  # noqa: D103
     if not hasattr(app, 'add_config_value'):
         return  # probably called by nose, better bail out
 
@@ -133,7 +134,7 @@ class ManglingDomainBase:  # noqa: D101
         super().__init__(*a, **kw)
         self.wrap_mangling_directives()
 
-    def wrap_mangling_directives(self):  # noqa: D102
+    def wrap_mangling_directives(self) -> None:  # noqa: D102
         for name, objtype in list(self.directive_mangling_map.items()):
             self.directives[name] = wrap_mangling_directive(self.directives[name], objtype)
 
@@ -163,7 +164,10 @@ class NumpyCDomain(ManglingDomainBase, CDomain):  # noqa: D101
     }
 
 
-def wrap_mangling_directive(base_directive, objtype):  # noqa: D103
+base_class = TypeVar('base_class', bound=type)
+
+
+def wrap_mangling_directive(base_directive, objtype) -> type[base_class]:  # noqa: D103
     class directive(base_directive):
         def run(self):
             env = self.state.document.settings.env

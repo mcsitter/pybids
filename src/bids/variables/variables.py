@@ -530,6 +530,8 @@ class DenseRunVariable(BIDSVariable):
 
     """
 
+    sampling_rate: float
+
     def __init__(self, name, values, run_info, source, sampling_rate):
         values = pd.DataFrame(values)
 

@@ -145,7 +145,7 @@ def ghcommit_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
     return [node], []
 
 
-def setup(app):
+def setup(app) -> None:
     """Install the plugin.
 
     :param app: Sphinx application context.

@@ -1,7 +1,7 @@
 import re  # noqa: D100
 
 
-def dollars_to_math(source):
+def dollars_to_math(source) -> None:
     r"""Replace dollar signs with backticks.
 
     More precisely, do a regular expression search.  Replace a plain
@@ -52,14 +52,14 @@ def dollars_to_math(source):
     source[:] = [s]
 
 
-def process_dollars(app, docname, source):  # noqa: D103
+def process_dollars(app, docname, source) -> None:  # noqa: D103
     dollars_to_math(source)
 
 
-def mathdollar_docstrings(app, what, name, obj, options, lines):  # noqa: D103
+def mathdollar_docstrings(app, what, name, obj, options, lines) -> None:  # noqa: D103
     dollars_to_math(lines)
 
 
-def setup(app):  # noqa: D103
+def setup(app) -> None:  # noqa: D103
     app.connect('source-read', process_dollars)
     app.connect('autodoc-process-docstring', mathdollar_docstrings)

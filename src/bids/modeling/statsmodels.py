@@ -1,5 +1,7 @@
 """BIDS-StatsModels functionality."""
 
+from __future__ import annotations
+
 import fnmatch
 import itertools
 import json
@@ -7,6 +9,7 @@ import re
 import warnings
 from collections import Counter, OrderedDict, defaultdict, namedtuple
 from functools import reduce
+from typing import TYPE_CHECKING, Literal, overload
 
 import numpy as np
 import pandas as pd
@@ -20,6 +23,9 @@ from bids.variables.collections import CollectionT
 
 from .model_spec import GLMMSpec, MetaAnalysisSpec
 from .report.utils import node_report, snake_to_camel
+
+if TYPE_CHECKING:
+    from graphviz import Digraph
 
 
 def validate_model(model, *, stacklevel=2) -> bool:  # noqa: D417
@@ -173,7 +179,7 @@ class BIDSStatsModelsGraph:
 
         return edges
 
-    def get_node(self, name):
+    def get_node(self, name) -> BIDSStatsModelsNode:
         """Return the named node.
 
         Parameters
@@ -224,6 +230,17 @@ class BIDSStatsModelsGraph:
             collections = self.layout.get_collections(node.level, drop_na=drop_na, **node_kwargs)
             node.add_collections(collections)
 
+    @overload
+    def write_graph(
+        self,
+        dotfilename: str = 'graph.dot',
+        format: Literal['png', 'svg'] = 'png',
+        pipe: Literal[False] = False,
+    ) -> Digraph: ...
+    @overload
+    def write_graph(
+        self, dotfilename: str = 'graph.dot', format: str = 'png', pipe: Literal[True] = True
+    ) -> str: ...
     def write_graph(self, dotfilename='graph.dot', format='png', pipe=False):  # noqa: A002, D417
         """Generates a graphviz dot file and a png file
 
@@ -478,7 +495,7 @@ class BIDSStatsModelsNode:
         transformation_history=False,
         node_reports=False,
         **filters,
-    ):
+    ) -> list:
         """Execute node with provided inputs.
 
         Parameters
@@ -712,7 +729,7 @@ class BIDSStatsModelsNodeOutput:
         collections=None,
         inputs=None,
         force_dense=True,
-        sampling_rate='TR',
+        sampling_rate: Literal['TR'] | float = 'TR',
         invalid_inputs='error',
         invalid_contrasts='drop',
         missing_values=None,
@@ -825,7 +842,9 @@ class BIDSStatsModelsNodeOutput:
 
         self.report_ = node_report(self) if node_reports else None
 
-    def _collections_to_dfs(self, collections: list[CollectionT], *, collection_history=False):
+    def _collections_to_dfs(
+        self, collections: list[CollectionT], *, collection_history: bool = False
+    ):
         """Merges collections and converts them to a pandas DataFrame."""
         if not collections:
             return []

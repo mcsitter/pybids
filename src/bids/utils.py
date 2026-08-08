@@ -77,7 +77,7 @@ def matches_entities(obj, entities, strict=False) -> bool:
     return True
 
 
-def natural_sort(l, field=None):  # noqa: E741
+def natural_sort(l, field=None) -> list:  # noqa: E741
     """Based on snippet found at https://stackoverflow.com/a/4836734/2445984"""
     convert = lambda text: int(text) if text.isdigit() else text.lower()  # noqa: E731
 
@@ -221,7 +221,7 @@ def validate_multiple(val, retval=None) -> object:
 
 
 @cache
-def entity_indices(schema_spec=None):  # noqa: D103
+def entity_indices(schema_spec=None) -> dict:  # noqa: D103
     from collections import defaultdict
 
     from bidsschematools.schema import load_schema
@@ -231,7 +231,7 @@ def entity_indices(schema_spec=None):  # noqa: D103
     return defaultdict(lambda e=entities: len(e), {elem: idx for idx, elem in enumerate(entities)})
 
 
-def bids_sort(unsorted: dict, schema_spec=None):
+def bids_sort(unsorted: dict, schema_spec=None) -> dict:
     """Sorts filename entity dictionaries according to their order as defined in
     schema.rules.entities as well as suffix, extension. Lastly, appends datatype
     to the end of the sort to accommodate pybids datastructures.

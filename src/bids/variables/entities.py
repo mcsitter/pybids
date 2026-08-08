@@ -1,5 +1,7 @@
 """Data classes for internal BIDS data hierarchy."""
 
+from __future__ import annotations
+
 from collections import namedtuple
 from itertools import chain
 from typing import Literal, overload

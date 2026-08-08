@@ -124,7 +124,7 @@ def validate_derivative_path(path: str | Path, **kwargs) -> str:  # noqa: D103
     return pipeline_name
 
 
-def _sort_patterns(patterns, root):
+def _sort_patterns(patterns, root: Path) -> list[Path | re.Pattern]:  # noqa: D103
     """Return sorted patterns, from more specific to more general."""
     regexes = [patt for patt in patterns if hasattr(patt, 'search')]
 

@@ -1,13 +1,16 @@
 """Classes and functions related to the management of sets of BIDSVariables."""
 
+from __future__ import annotations
+
 import fnmatch
 import re
+import sys
 import warnings
 from collections import OrderedDict
 from copy import copy
 from functools import cache
 from itertools import chain
-from typing import Literal, TypeVar, overload
+from typing import Literal, TypeVar, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -23,6 +26,10 @@ from .variables import (
     merge_variables,
 )
 
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 CollectionT = TypeVar('CollectionT', bound='BIDSVariableCollection')
 
 
@@ -81,9 +88,9 @@ class BIDSVariableCollection:
 
     """
 
-    def __init__(
-        self, variables: list[BIDSVariable] | list[SimpleVariable], name: str | None = None
-    ):
+    variables: dict[str, BIDSVariable]
+
+    def __init__(self, variables: list[BIDSVariable], name: str | None = None):
         self.name = name
 
         if not variables:
@@ -119,7 +126,7 @@ class BIDSVariableCollection:
 
         self.level = list(var_levels)[0]
         variables = self.merge_variables(variables)
-        self.variables = {v.name: v for v in variables}
+        self.variables: dict[str, BIDSVariable] = {v.name: v for v in variables}
         self._index_entities()
 
         # Container for variable groups (see BIDS-StatsModels spec)--maps from
@@ -127,7 +134,7 @@ class BIDSVariableCollection:
         self.groups: dict[str, list[BIDSVariable]] = {}
 
     @staticmethod
-    def merge_variables(variables, **kwargs):  # noqa: D417
+    def merge_variables(variables: list[BIDSVariable], **kwargs) -> list[BIDSVariable]:  # noqa: D417
         """Concatenates Variables along row axis.
 
         Parameters
@@ -150,7 +157,14 @@ class BIDSVariableCollection:
             var_dict[v.name].append(v)
         return [merge_variables(vars_, **kwargs) for vars_ in list(var_dict.values())]
 
-    def to_df(self, variables=None, format='wide', fillna=np.nan, entities=True, timing=True):  # noqa: A002
+    def to_df(
+        self,
+        variables: list[str] | list[BIDSVariable] | None = None,
+        format: Literal['wide', 'long'] = 'wide',  # noqa: A002
+        fillna=np.nan,
+        entities=True,
+        timing=True,
+    ) -> pd.DataFrame:
         """Merge BIDVariables in the collection into a single pandas DataFrame.
 
         Parameters
@@ -184,8 +198,12 @@ class BIDSVariableCollection:
             variables = list(self.variables.keys())
 
         # Can receive already-selected Variables from sub-classes
-        if not isinstance(variables[0], BIDSVariable):
-            variables = [v for v in self.variables.values() if v.name in variables]
+        if isinstance(variables[0], str):
+            variables: list[BIDSVariable] = [
+                v for v in self.variables.values() if v.name in variables
+            ]
+        else:
+            variables = cast(list[BIDSVariable], variables)
 
         # Convert all variables to separate DFs.
         # Note: bad things can happen if we pass the conditions, entities, and
@@ -263,7 +281,7 @@ class BIDSVariableCollection:
             variables.append(SimpleVariable(name=col, data=_data, source=source))
         return BIDSVariableCollection(variables)
 
-    def clone(self):
+    def clone(self) -> Self:
         """Returns a copy of the current instance."""
         # We can't simply deepcopy, because variables have non-serializable
         # attributes. So we shallow copy then explicitly clone collections and
@@ -315,40 +333,40 @@ class BIDSVariableCollection:
             obj.name = var
         self.variables[var] = obj
 
-    def match_variables(self, pattern, return_type='name', match_type='unix'):
-        """Return columns whose names match the provided pattern.
+    @overload
+    def match_variables(
+        self,
+        pattern: str | list[str],
+        return_type: Literal['name'] = 'name',
+        match_type: Literal['unix', 'regex'] = 'unix',
+    ) -> list[str]: ...
 
-        Parameters
-        ----------
-        pattern : str, list
-            One or more regex patterns to match all variable names against.
-        return_type : {'name', 'variable'}
-            What to return. Must be one of:
-            'name': Returns a list of names of matching variables.
-            'variable': Returns a list of Variable objects whose names
-            match.
-        match_type : str
-            Matching approach to use. Either 'regex' (full-blown regular
-                expression matching) or 'unix' (unix-style pattern matching
-                via the fnmatch module).
+    @overload
+    def match_variables(
+        self,
+        pattern: str | list[str],
+        return_type: Literal['variable'],
+        match_type: Literal['unix', 'regex'] = 'unix',
+    ) -> list[BIDSVariable]: ...
 
-        Returns
-        -------
-        A list of all matching variables or variable names
-
-        """
-        pattern = listify(pattern)
-        results = []
-        for patt in pattern:
-            if match_type.lower().startswith('re'):
-                patt = re.compile(patt)
-                vars_ = [v for v in self.variables.keys() if patt.search(v)]
+    def match_variables(
+        self,
+        pattern: str | list[str],
+        return_type: Literal['name', 'variable'] = 'name',
+        match_type: Literal['unix', 'regex'] = 'unix',
+    ) -> list[str] | list[BIDSVariable]:
+        """Return variables whose names match the provided pattern."""
+        patterns = listify(pattern)
+        names: list[str] = []
+        for patt in patterns:
+            if match_type.startswith('re'):
+                re_pattern = re.compile(patt)
+                names.extend(name for name in self.variables if re_pattern.search(name))
             else:
-                vars_ = fnmatch.filter(list(self.variables.keys()), patt)
-            if return_type.startswith('var'):
-                vars_ = [self.variables[v] for v in vars_]
-            results.extend(vars_)
-        return results
+                names.extend(fnmatch.filter(self.variables, patt))
+        if return_type == 'variable':
+            return [self.variables[name] for name in names]
+        return names
 
     def __repr__(self):
         return f'<{self.__class__.__name__}{sorted(list(self.variables.keys()))}>'  # noqa: C414
@@ -374,6 +392,8 @@ class BIDSRunVariableCollection(BIDSVariableCollection):
 
     """
 
+    variables: dict[str, SparseRunVariable | DenseRunVariable]
+
     def __init__(self, variables, sampling_rate=None):
         # Don't put the default value in signature because None is passed from
         # several places and we don't want multiple conflicting defaults.
@@ -383,20 +403,24 @@ class BIDSRunVariableCollection(BIDSVariableCollection):
         self.sampling_rate = sampling_rate or 10
         super().__init__(variables)
 
-    def get_dense_variables(self, variables=None):
+    def get_dense_variables(
+        self, variables: list[str] | list[BIDSVariable] | None = None
+    ) -> list[DenseRunVariable]:
         """Returns a list of all stored DenseRunVariables."""
         if variables is None:
-            variables = set(self.variables.keys())
+            variables: set[str] = set(self.variables.keys())
         return [
             v
             for v in self.variables.values()
             if isinstance(v, DenseRunVariable) and v.name in variables
         ]
 
-    def get_sparse_variables(self, variables=None):
+    def get_sparse_variables(
+        self, variables: list[BIDSVariable] | list[str] | None = None
+    ) -> list[SparseRunVariable]:  # noqa: D417
         """Returns a list of all stored SparseRunVariables."""
         if variables is None:
-            variables = set(self.variables.keys())
+            variables: set[str] = set(self.variables.keys())
         return [
             v
             for v in self.variables.values()
@@ -457,7 +481,7 @@ class BIDSRunVariableCollection(BIDSVariableCollection):
         force_dense=False,
         in_place=False,
         kind='linear',
-    ) -> 'BIDSRunVariableCollection':
+    ) -> BIDSRunVariableCollection:
         sr = self._get_sampling_rate(sampling_rate)
 
         _dense, _sparse = [], []
@@ -488,7 +512,7 @@ class BIDSRunVariableCollection(BIDSVariableCollection):
             if v.name not in _variables:
                 _variables[v.name] = v
 
-        coll = self if in_place else self.clone()
+        coll: BIDSRunVariableCollection = self if in_place else self.clone()
 
         if in_place:
             coll.variables.update(_variables)
@@ -505,7 +529,7 @@ class BIDSRunVariableCollection(BIDSVariableCollection):
         variables=None,
         in_place: Literal[False] = False,
         resample_dense=False,
-    ) -> 'BIDSRunVariableCollection': ...
+    ) -> BIDSRunVariableCollection: ...
     @overload
     def to_dense(
         self,
@@ -622,14 +646,14 @@ class BIDSRunVariableCollection(BIDSVariableCollection):
 
     def to_df(
         self,
-        variables=None,
+        variables: list[str] | list[BIDSVariable] | None = None,
         format='wide',  # noqa: A002
         fillna=np.nan,
-        entities=True,
-        timing=True,
-        sampling_rate='highest',
-        include_sparse=True,
-        include_dense=True,
+        entities: bool = True,
+        timing: bool = True,
+        sampling_rate: None | Literal['TR', 'highest'] | float = 'highest',
+        include_sparse: bool = True,
+        include_dense: bool = True,
     ) -> pd.DataFrame:
         """Merge variables into a single pandas DataFrame.
 
@@ -714,9 +738,9 @@ class BIDSRunVariableCollection(BIDSVariableCollection):
 
 def merge_collections(
     collections: list[CollectionT],
-    sampling_rate: int | Literal['highest'] | None = 'highest',
+    sampling_rate: int | float | Literal['highest'] | None = 'highest',
     output_level: str | None = None,
-    variables: list[str] | None = None,
+    variables: list[BIDSVariable] | None = None,
 ) -> CollectionT:
     """Merge two or more collections at the same level of analysis.
 
@@ -758,7 +782,7 @@ def merge_collections(
     keep_vars = list(chain(*[c.variables.values() for c in collections]))
     if variables is not None:
         keep_vars = [var for var in keep_vars if var.name in variables]
-    variables = keep_vars
+    variables: list[BIDSVariable] = keep_vars
 
     # merge_variables will automatically merge all variables that share name
     variables = cls.merge_variables(variables, sampling_rate=sampling_rate)
