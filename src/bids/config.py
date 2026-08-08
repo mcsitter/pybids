@@ -20,7 +20,7 @@ _default_settings = {
 }
 
 
-def set_option(key, value):
+def set_option(key, value) -> None:
     """Set a package-wide option.
 
     Args:
@@ -44,7 +44,7 @@ def set_option(key, value):
     _settings[key] = value
 
 
-def set_options(**kwargs):
+def set_options(**kwargs) -> None:
     """Set multiple package-wide options.
 
     Args:

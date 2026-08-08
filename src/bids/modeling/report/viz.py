@@ -1,8 +1,9 @@
 import altair as alt  # noqa: D100
 import numpy as np
+import pandas as pd
 
 
-def plot_corr_matrix(dm_wide):  # noqa: D103
+def plot_corr_matrix(dm_wide: pd.DataFrame) -> alt.Chart:  # noqa: D103
     dm_corr = dm_wide.corr()
     dm_corr = dm_corr.where(np.triu(np.ones(dm_corr.shape)).astype(np.bool)).reset_index()
     dm_corr_long = dm_corr.melt(
@@ -35,12 +36,12 @@ def plot_corr_matrix(dm_wide):  # noqa: D103
 alt.data_transformers.enable('default', max_rows=None)
 
 
-def melt_dm(dm):  # noqa: D103
+def melt_dm(dm: pd.DataFrame) -> pd.DataFrame:  # noqa: D103
     dm = dm.reset_index().rename(columns={'index': 'scan_number'})
     return dm.melt('scan_number', var_name='regressor', value_name='value')
 
 
-def plot_design_matrix(dm_wide, scale=False, timecourse=True):  # noqa: D103
+def plot_design_matrix(dm_wide, scale=False, timecourse=True) -> object:  # noqa: D103
     if scale:
         dm_wide = (dm_wide - dm_wide.mean()) / (dm_wide.max() - dm_wide.min())
     dm = melt_dm(dm_wide)

@@ -167,7 +167,7 @@ def parse_file_entities(filename, entities=None, config=None, include_unmatched=
     return ent_vals
 
 
-def add_config_paths(**kwargs):
+def add_config_paths(**kwargs) -> None:
     """Add to the pool of available configuration files for BIDSLayout.
 
     Parameters

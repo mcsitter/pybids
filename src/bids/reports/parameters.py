@@ -25,7 +25,7 @@ def describe_slice_timing(img, metadata: dict) -> str:
     return f'{n_slices} slices{slice_order}'
 
 
-def describe_repetition_time(metadata: dict):
+def describe_repetition_time(metadata: dict) -> str:
     """Generate description of repetition time from metadata."""
     tr = metadata['RepetitionTime'] * 1000
     tr = num_to_str(tr)
@@ -73,7 +73,7 @@ def describe_multiband_factor(metadata) -> str:
     )
 
 
-def describe_echo_times(files):
+def describe_echo_times(files) -> tuple[str, str]:
     """Generate description of echo times from metadata field.
 
     Parameters
@@ -102,7 +102,7 @@ def describe_echo_times(files):
     return te_str, me_str
 
 
-def describe_echo_times_fmap(files):
+def describe_echo_times_fmap(files) -> str:
     """Generate description of echo times from metadata field for fmaps
 
     Parameters
@@ -130,7 +130,7 @@ def describe_echo_times_fmap(files):
     return f'echo time 1 / 2, TE1/2={te1}{te2}ms'
 
 
-def describe_image_size(img):
+def describe_image_size(img) -> tuple[str, str, str]:
     """Generate description imaging data sizes, including FOV, voxel size, and matrix size.
 
     Parameters
@@ -168,7 +168,7 @@ def describe_flip_angle(metadata: dict) -> str:
     return 'flip angle, FA={}<deg>'.format(metadata.get('FlipAngle', 'UNKNOWN'))
 
 
-def describe_dmri_directions(img):
+def describe_dmri_directions(img) -> str:
     """Generate description of diffusion directions."""
     return f'{img.shape[3]} diffusion directions'
 
@@ -283,7 +283,7 @@ def get_slice_info(slice_times) -> str:
     return slice_order_name
 
 
-def describe_sequence(metadata: dict, config: dict):
+def describe_sequence(metadata: dict, config: dict) -> tuple[str, str]:
     """Extract and reformat imaging sequence(s) and variant(s) into pretty strings.
 
     Parameters
@@ -316,7 +316,7 @@ def describe_sequence(metadata: dict, config: dict):
     return seqs, variants
 
 
-def get_size_str(img):
+def get_size_str(img) -> tuple[str, str, str]:
     """Extract and reformat voxel size, matrix size, FOV, and number of slices into strings.
 
     Parameters

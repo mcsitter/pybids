@@ -1,5 +1,7 @@
 """Model classes used in BIDSLayouts."""
 
+from __future__ import annotations
+
 import json
 import os
 import re
@@ -9,8 +11,9 @@ from copy import deepcopy
 from functools import lru_cache
 from itertools import chain
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal, overload
 
+import pandas as pd
 from bidsschematools import rules
 from sqlalchemy import Boolean, Column, ForeignKey, String, Table
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -32,6 +35,9 @@ from ..exceptions import BIDSChildDatasetError
 from ..utils import bids_sort, listify
 from .utils import BIDSMetadata, PaddedInt
 from .writing import build_path, write_to_file
+
+if TYPE_CHECKING:
+    from nibabel.filebasedimages import FileBasedImage
 
 DTypeName: TypeAlias = Literal['bool', 'float', 'int', 'str', 'json']
 DType: TypeAlias = type | DTypeName
@@ -55,10 +61,10 @@ class LayoutInfo(Base):
 
     __tablename__ = 'layout_info'
 
-    root = Column(String, primary_key=True)
-    absolute_paths = Column(Boolean, default=True)  # Removed, but may be in older DBs
-    _derivatives = Column(String)
-    _config = Column(String)
+    root: str = Column(String, primary_key=True)
+    absolute_paths: bool = Column(Boolean, default=True)  # Removed, but may be in older DBs
+    _derivatives: str = Column(String)
+    _config: str = Column(String)
 
     def __init__(self, **kwargs):
         init_args = self._sanitize_init_args(kwargs)
@@ -515,7 +521,7 @@ class BIDSFile(Base):
         root: str = first.root
         return str(UPath(self.path).relative_to(root))
 
-    def get_associations(self, kind=None, include_parents=False) -> list['BIDSFile']:
+    def get_associations(self, kind=None, include_parents=False) -> list[BIDSFile]:
         """Get associated files, optionally limiting by association kind.
 
         Parameters
@@ -565,12 +571,20 @@ class BIDSFile(Base):
 
         return list(chain(*[collect_associations([], bf) for bf in associations]))
 
-    def get_metadata(self):
+    def get_metadata(self) -> BIDSMetadata:
         """Return all metadata associated with the current file."""
         md = BIDSMetadata(self.path)
         md.update(self.get_entities(metadata=True))
         return md
 
+    @overload
+    def get_entities(
+        self, metadata: bool | None = False, values: Literal['tags'] = 'tags'
+    ) -> dict[str, str]: ...
+    @overload
+    def get_entities(
+        self, metadata: bool | None = True, values: Literal['objects'] = 'objects'
+    ) -> dict[str, Entity]: ...
     def get_entities(self, metadata=False, values='tags'):
         """Return entity information for the current file.
 
@@ -618,7 +632,7 @@ class BIDSFile(Base):
         symbolic_link=False,
         root: str | None = None,
         conflicts: Literal['fail', 'skip', 'overwrite', 'append'] = 'fail',
-    ):
+    ) -> None:
         """Copy the contents of a file to a new location.
 
         Parameters
@@ -673,7 +687,9 @@ class BIDSDataFile(BIDSFile):
 
     __mapper_args__ = {'polymorphic_identity': 'data_file'}
 
-    def get_df(self, include_timing=True, adjust_onset=False, enforce_dtypes=True, **pd_args):
+    def get_df(
+        self, include_timing=True, adjust_onset=False, enforce_dtypes=True, **pd_args
+    ) -> pd.DataFrame:
         """Return the contents of a tsv file as a pandas DataFrame.
 
         Parameters
@@ -741,7 +757,7 @@ class BIDSImageFile(BIDSFile):
 
     __mapper_args__ = {'polymorphic_identity': 'image_file'}
 
-    def get_image(self, **kwargs):
+    def get_image(self, **kwargs) -> FileBasedImage:
         """Return the associated image file (if it exists) as a NiBabel object
 
         Any keyword arguments are passed to ``nibabel.load``.
@@ -765,7 +781,7 @@ class BIDSJSONFile(BIDSFile):
 
     __mapper_args__ = {'polymorphic_identity': 'json_file'}
 
-    def get_dict(self):
+    def get_dict(self) -> dict:
         """Return the contents of the current file as a dictionary."""
         d = json.loads(self.get_json())
         if not isinstance(d, dict):
@@ -775,7 +791,7 @@ class BIDSJSONFile(BIDSFile):
             )
         return d
 
-    def get_json(self):
+    def get_json(self) -> str:
         """Return the contents of the current file as a JSON string."""
         with open(str(self.path)) as f:
             return f.read()
@@ -894,7 +910,7 @@ class Entity(Base):
         """Return all unique values/levels for the current entity."""
         return list(set(self.files.values()))
 
-    def count(self, files=False):
+    def count(self, files: bool = False) -> int:
         """Return a count of unique values or files.
 
         Parameters
@@ -968,7 +984,7 @@ class Tag(Base):
 
     def __init__(
         self,
-        file: 'BIDSFile',
+        file: BIDSFile,
         entity,
         value,
         dtype: str | type | None = None,
@@ -1009,7 +1025,7 @@ class Tag(Base):
 
 
 def _create_tag_dict(
-    file: 'BIDSFile', entity, value, dtype: str | type | None = None, is_metadata: bool = False
+    file: BIDSFile, entity, value, dtype: str | type | None = None, is_metadata: bool = False
 ) -> dict[str, str | bool]:
     data: dict[str, str | bool] = {}
     if dtype is None:
@@ -1080,7 +1096,7 @@ class DerivativeDatasets(UserDict):  # noqa: D101
                 'a dataset file name.'
             ) from err
 
-    def get_pipeline(self, pipeline):  # noqa: D102
+    def get_pipeline(self, pipeline) -> tuple[str, object]:  # noqa: D102
         matches = {
             (name, dataset)
             for name, dataset in self.data.items()

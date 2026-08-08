@@ -6,7 +6,7 @@ import pandas as pd
 from scipy.linalg import null_space
 
 
-def node_report(node_output):
+def node_report(node_output) -> dict[str, object]:
     """Generate a report for a single node."""
     # If only intercept model, don't run reports
     if node_output.node.level != 'run':
@@ -29,7 +29,7 @@ def node_report(node_output):
     return _report
 
 
-def est_vif(desmat):  # noqa: D417
+def est_vif(desmat: pd.DataFrame) -> pd.DataFrame:  # noqa: D417
     """General variance inflation factor estimation.  Calculates VIF for all
     regressors in the design matrix.
 
@@ -57,7 +57,7 @@ def est_vif(desmat):  # noqa: D417
     return vif_data
 
 
-def get_eff_reg_vif(desmat, contrast_def):  # noqa: D417
+def get_eff_reg_vif(desmat: pd.DataFrame, contrast_def) -> float:  # noqa: D417
     """The goal of this function is to estimate a variance inflation factor for a contrast.
     This is done by extending the effective regressor definition from Smith et al (2007)
     Meaningful design and contrast estimability (NeuroImage).  Regressors involved
@@ -101,7 +101,7 @@ def get_eff_reg_vif(desmat, contrast_def):  # noqa: D417
     return vif_output
 
 
-def generate_contrast_matrix(contrasts, cols):  # noqa: D417
+def generate_contrast_matrix(contrasts, cols) -> pd.DataFrame:  # noqa: D417
     """Generate a contrast matrix from a list of contrast definitions.
 
     Parameters
@@ -125,7 +125,7 @@ def generate_contrast_matrix(contrasts, cols):  # noqa: D417
     return df
 
 
-def get_all_contrast_vif(node_output):  # noqa: D417
+def get_all_contrast_vif(node_output) -> pd.DataFrame:  # noqa: D417
     """Calculates the VIF for multiple contrasts
 
     Parameters
@@ -164,18 +164,18 @@ def deroot(val, root):  # noqa: D103
     return val
 
 
-def snake_to_camel(string):  # noqa: D103
+def snake_to_camel(string: str) -> str:  # noqa: D103
     words = string.split('_')
     return words[0] + ''.join(word.title() for word in words[1:])
 
 
-def displayify(contrast_name):  # noqa: D103
+def displayify(contrast_name: str) -> str:  # noqa: D103
     for match, repl in (('_gt_', ' &gt; '), ('_lt_', ' &lt; '), ('_vs_', ' vs. ')):
         contrast_name = contrast_name.replace(match, repl)
     return contrast_name
 
 
-def to_alphanum(string):
+def to_alphanum(string: str) -> str:
     """Convert string to alphanumeric
 
     Replaces all other characters with underscores and then converts to camelCase

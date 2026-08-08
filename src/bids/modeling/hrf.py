@@ -64,7 +64,7 @@ def _gamma_difference_hrf(
     return hrf
 
 
-def spm_hrf(tr, oversampling=50, time_length=32.0, onset=0.0):
+def spm_hrf(tr, oversampling=50, time_length=32.0, onset=0.0) -> NDArray[np.float64]:
     """Implementation of the SPM hrf model
 
     Parameters
@@ -87,7 +87,7 @@ def spm_hrf(tr, oversampling=50, time_length=32.0, onset=0.0):
     return _gamma_difference_hrf(tr, oversampling, time_length, onset)
 
 
-def glover_hrf(tr, oversampling=50, time_length=32.0, onset=0.0):
+def glover_hrf(tr, oversampling=50, time_length=32.0, onset=0.0) -> NDArray[np.float64]:
     """Implementation of the Glover hrf model
 
     Parameters
@@ -120,7 +120,7 @@ def glover_hrf(tr, oversampling=50, time_length=32.0, onset=0.0):
     )
 
 
-def spm_time_derivative(tr, oversampling=50, time_length=32.0, onset=0.0):
+def spm_time_derivative(tr, oversampling=50, time_length=32.0, onset=0.0) -> NDArray[np.float64]:
     """Implementation of the SPM time derivative hrf (dhrf) model
 
     Parameters
@@ -152,7 +152,9 @@ def spm_time_derivative(tr, oversampling=50, time_length=32.0, onset=0.0):
     return dhrf
 
 
-def glover_time_derivative(tr, oversampling=50, time_length=32.0, onset=0.0):
+def glover_time_derivative(
+    tr, oversampling=50, time_length=32.0, onset=0.0
+) -> NDArray[np.float64]:
     """Implementation of the Glover time derivative hrf (dhrf) model
 
     Parameters
@@ -184,7 +186,9 @@ def glover_time_derivative(tr, oversampling=50, time_length=32.0, onset=0.0):
     return dhrf
 
 
-def spm_dispersion_derivative(tr, oversampling=50, time_length=32.0, onset=0.0):
+def spm_dispersion_derivative(
+    tr, oversampling=50, time_length=32.0, onset=0.0
+) -> NDArray[np.float64]:
     """Implementation of the SPM dispersion derivative hrf model
 
     Parameters
@@ -216,7 +220,9 @@ def spm_dispersion_derivative(tr, oversampling=50, time_length=32.0, onset=0.0):
     return dhrf
 
 
-def glover_dispersion_derivative(tr, oversampling=50, time_length=32.0, onset=0.0):
+def glover_dispersion_derivative(
+    tr, oversampling=50, time_length=32.0, onset=0.0
+) -> NDArray[np.float64]:
     """Implementation of the Glover dispersion derivative hrf model
 
     Parameters
@@ -500,7 +506,7 @@ def compute_regressor(
     oversampling=50,
     fir_delays=None,
     min_onset=-24,
-):
+) -> tuple[NDArray[np.float64], list[str]]:
     """Convolve regressors with hrf model (the main function of the module)
 
     Parameters

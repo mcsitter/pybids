@@ -474,7 +474,7 @@ class TransformerManager:
             name += '_'
         return name
 
-    def register(self, name, func):
+    def register(self, name, func) -> None:
         """Register a new transformation handler.
 
         Parameters
@@ -488,7 +488,9 @@ class TransformerManager:
         name = self._sanitize_name(name)
         self.transformations[name] = func
 
-    def transform(self, collection, transformations):
+    def transform(
+        self, collection: BIDSVariableCollection, transformations: list
+    ) -> BIDSVariableCollection:
         """Apply all transformations to the variables in the collection.
 
         Parameters

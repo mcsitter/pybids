@@ -7,6 +7,7 @@ from collections import OrderedDict
 from copy import copy
 from functools import cache
 from itertools import chain
+from typing import Literal, TypeVar, overload
 
 import numpy as np
 import pandas as pd
@@ -21,6 +22,8 @@ from .variables import (
     SparseRunVariable,
     merge_variables,
 )
+
+CollectionT = TypeVar('CollectionT', bound='BIDSVariableCollection')
 
 
 def _pandas_3_0():
@@ -78,7 +81,9 @@ class BIDSVariableCollection:
 
     """
 
-    def __init__(self, variables, name=None):
+    def __init__(
+        self, variables: list[BIDSVariable] | list[SimpleVariable], name: str | None = None
+    ):
         self.name = name
 
         if not variables:
@@ -119,7 +124,7 @@ class BIDSVariableCollection:
 
         # Container for variable groups (see BIDS-StatsModels spec)--maps from
         # group names to lists of variables.
-        self.groups = {}
+        self.groups: dict[str, list[BIDSVariable]] = {}
 
     @staticmethod
     def merge_variables(variables, **kwargs):  # noqa: D417
@@ -398,19 +403,21 @@ class BIDSRunVariableCollection(BIDSVariableCollection):
             if isinstance(v, SparseRunVariable) and v.name in variables
         ]
 
-    def all_dense(self):  # noqa: D102
+    def all_dense(self) -> bool:  # noqa: D102
         return len(self.get_dense_variables()) == len(self.variables)
 
-    def all_sparse(self):  # noqa: D102
+    def all_sparse(self) -> bool:  # noqa: D102
         return len(self.get_sparse_variables()) == len(self.variables)
 
-    def _get_sampling_rate(self, sampling_rate):
+    def _get_sampling_rate(
+        self, sampling_rate: None | Literal['TR', 'highest'] | float | int = None
+    ) -> float:
         """Parse sampling rate argument and return appropriate value."""
         if sampling_rate is None:
             return self.sampling_rate
 
         if isinstance(sampling_rate, (float, int)):
-            return sampling_rate
+            return float(sampling_rate)
 
         if sampling_rate == 'TR':
             trs = {var.run_info[0].tr for var in self.variables.values()}
@@ -450,7 +457,7 @@ class BIDSRunVariableCollection(BIDSVariableCollection):
         force_dense=False,
         in_place=False,
         kind='linear',
-    ):
+    ) -> 'BIDSRunVariableCollection':
         sr = self._get_sampling_rate(sampling_rate)
 
         _dense, _sparse = [], []
@@ -491,6 +498,22 @@ class BIDSRunVariableCollection(BIDSVariableCollection):
         coll.sampling_rate = sr
         return coll
 
+    @overload
+    def to_dense(
+        self,
+        sampling_rate=None,
+        variables=None,
+        in_place: Literal[False] = False,
+        resample_dense=False,
+    ) -> 'BIDSRunVariableCollection': ...
+    @overload
+    def to_dense(
+        self,
+        sampling_rate=None,
+        variables=None,
+        in_place: Literal[True] = True,
+        resample_dense=False,
+    ) -> None: ...
     def to_dense(  # noqa: D417
         self,
         sampling_rate=None,
@@ -538,6 +561,24 @@ class BIDSRunVariableCollection(BIDSVariableCollection):
             force_dense=True,
         )
 
+    @overload
+    def resample(
+        self,
+        sampling_rate: None | Literal['TR', 'highest'] | float = None,
+        variables: list[str] | None = None,
+        force_dense: bool = False,
+        in_place: Literal[False] = False,
+        kind: str = 'linear',
+    ) -> BIDSVariableCollection: ...
+    @overload
+    def resample(
+        self,
+        sampling_rate: None | Literal['TR', 'highest'] | float = None,
+        variables: list[str] | None = None,
+        force_dense: bool = False,
+        in_place: Literal[True] = True,
+        kind: str = 'linear',
+    ) -> None: ...
     def resample(
         self,
         sampling_rate=None,
@@ -589,7 +630,7 @@ class BIDSRunVariableCollection(BIDSVariableCollection):
         sampling_rate='highest',
         include_sparse=True,
         include_dense=True,
-    ):
+    ) -> pd.DataFrame:
         """Merge variables into a single pandas DataFrame.
 
         Parameters
@@ -671,7 +712,12 @@ class BIDSRunVariableCollection(BIDSVariableCollection):
         return super().to_df(variables, format, fillna, entities=entities, timing=timing)
 
 
-def merge_collections(collections, sampling_rate='highest', output_level=None, variables=None):
+def merge_collections(
+    collections: list[CollectionT],
+    sampling_rate: int | Literal['highest'] | None = 'highest',
+    output_level: str | None = None,
+    variables: list[str] | None = None,
+) -> CollectionT:
     """Merge two or more collections at the same level of analysis.
 
     Parameters
@@ -694,7 +740,7 @@ def merge_collections(collections, sampling_rate='highest', output_level=None, v
         Result type depends on the type of the input collections.
 
     """
-    collections = listify(collections)
+    collections: list[CollectionT] = listify(collections)
     if len(collections) == 1 and variables is None:
         return collections[0]
 
@@ -706,7 +752,7 @@ def merge_collections(collections, sampling_rate='highest', output_level=None, v
             'passed collections at levels: %s.' % levels
         )
 
-    cls = collections[0].__class__
+    cls: type[CollectionT] = collections[0].__class__
 
     # Flatten all variables from all collections into a single list
     keep_vars = list(chain(*[c.variables.values() for c in collections]))
@@ -717,7 +763,7 @@ def merge_collections(collections, sampling_rate='highest', output_level=None, v
     # merge_variables will automatically merge all variables that share name
     variables = cls.merge_variables(variables, sampling_rate=sampling_rate)
 
-    if isinstance(collections[0], BIDSRunVariableCollection):
+    if cls is BIDSRunVariableCollection:
         if sampling_rate == 'highest':
             rates = [var.sampling_rate for var in variables if isinstance(var, DenseRunVariable)]
 

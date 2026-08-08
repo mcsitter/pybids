@@ -1,9 +1,13 @@
 """Utility functions."""
 
+from __future__ import annotations
+
 import logging
 import os
 import re
+from collections.abc import Hashable
 from functools import cache
+from typing import TYPE_CHECKING, TypeVar, overload
 from warnings import warn
 
 from bidsschematools.schema import load_schema
@@ -12,6 +16,10 @@ from frozendict import frozendict as _frozendict
 from packaging.version import InvalidVersion, Version
 from upath import UPath as Path
 
+if TYPE_CHECKING:
+    from .layout import BIDSFile
+
+T = TypeVar('T')
 logger = logging.getLogger(__name__)
 
 
@@ -31,17 +39,28 @@ def listify(obj):
     return obj if isinstance(obj, (list, tuple, type(None))) else [obj]
 
 
-def hashablefy(obj):
+@overload
+def hashablefy(obj: list[T]) -> tuple[T, ...]: ...
+
+
+@overload
+def hashablefy(obj: dict) -> frozendict: ...
+
+
+@overload
+def hashablefy(obj: T) -> T: ...
+
+
+def hashablefy(obj) -> Hashable:
     """Make dictionaries and lists hashable or raise."""
     if isinstance(obj, list):
-        return tuple([hashablefy(o) for o in obj])
-
+        return tuple(hashablefy(o) for o in obj)
     if isinstance(obj, dict):
         return frozendict({k: hashablefy(v) for k, v in obj.items()})
     return obj
 
 
-def matches_entities(obj, entities, strict=False):
+def matches_entities(obj, entities, strict=False) -> bool:
     """Checks whether an object's entities match the input."""
     if strict and set(obj.entities.keys()) != set(entities.keys()):
         return False
@@ -72,7 +91,7 @@ def natural_sort(l, field=None):  # noqa: E741
     return sorted(l, key=alphanum_key)
 
 
-def convert_JSON(j):
+def convert_JSON(j) -> dict:
     """Recursively convert CamelCase keys to snake_case.
     From: https://stackoverflow.com/questions/17156078/
     converting-identifier-naming-between-camelcase-and-
@@ -109,7 +128,7 @@ def convert_JSON(j):
     return out
 
 
-def splitext(path):
+def splitext(path) -> list[str]:
     """Splitext for paths with directories that may contain dots.
     From https://stackoverflow.com/questions/5930036/separating-file-extensions-using-python-os-path-module
     """
@@ -124,7 +143,7 @@ def splitext(path):
     return li
 
 
-def make_bidsfile(filename):
+def make_bidsfile(filename) -> BIDSFile:
     """Create a BIDSFile instance of the appropriate class."""
     from .layout import models
 
@@ -144,7 +163,7 @@ def make_bidsfile(filename):
     return Cls(filename)
 
 
-def collect_associated_files(layout, files, extra_entities=()):  # noqa: D417
+def collect_associated_files(layout, files, extra_entities=()) -> list[list[BIDSFile]]:  # noqa: D417
     """Collect and group BIDSFiles with multiple files per acquisition.
 
     Parameters
@@ -166,7 +185,7 @@ def collect_associated_files(layout, files, extra_entities=()):  # noqa: D417
     if len(extra_entities):
         MULTICONTRAST_ENTITIES += extra_entities
 
-    collected_files = []
+    collected_files: list[list[BIDSFile]] = []
     for f in files:
         if len(collected_files) and any(f in filegroup for filegroup in collected_files):
             continue
@@ -186,7 +205,7 @@ def collect_associated_files(layout, files, extra_entities=()):  # noqa: D417
     return collected_files
 
 
-def validate_multiple(val, retval=None):
+def validate_multiple(val, retval=None) -> object:
     """Any click.Option with the multiple flag will return an empty tuple if not set.
 
     This helper method converts empty tuples to a desired return value (default: None).

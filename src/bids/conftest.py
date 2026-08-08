@@ -29,7 +29,7 @@ def config_paths():  # noqa: D103
 
 
 @pytest.fixture
-def extension_initial_dot():  # noqa: D103
+def extension_initial_dot() -> bool:  # noqa: D103
     import bids.config
 
     return bids.config.get_option('extension_initial_dot')
@@ -46,7 +46,7 @@ def mock_config(config_paths, extension_initial_dot):  # noqa: D103
 
 
 @pytest.fixture(scope='session')
-def bids_examples():  # noqa: D103
+def bids_examples() -> Path:  # noqa: D103
     examples_dir = Path(
         os.getenv(
             'BIDS_EXAMPLES', Path(__file__).absolute().parent.parent.parent / 'bids-examples'
@@ -62,7 +62,7 @@ def bids_examples():  # noqa: D103
 
 
 @pytest.fixture(scope='session')
-def tests_dir():  # noqa: D103
+def tests_dir() -> Path:  # noqa: D103
     test_dir = Path(
         os.getenv('PYBIDS_TEST_DATA', Path(__file__).absolute().parent.parent.parent / 'tests')
     )

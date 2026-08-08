@@ -62,7 +62,7 @@ class BIDSReport:
 
         self.config = config
 
-    def generate_from_files(self, files):
+    def generate_from_files(self, files) -> Counter:
         r"""Generate a methods section from a list of files.
 
         Parameters
@@ -133,7 +133,7 @@ class BIDSReport:
         print(utils.reminder())
         return counter
 
-    def generate(self, **kwargs):
+    def generate(self, **kwargs) -> Counter:
         r"""Generate the methods section.
 
         Parameters

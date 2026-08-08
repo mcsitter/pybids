@@ -13,14 +13,16 @@ import pandas as pd
 
 from bids.layout import BIDSLayout
 from bids.modeling import transformations as tm
+from bids.modeling.transformations.base import TransformationOutput
 from bids.utils import convert_JSON, listify, matches_entities
-from bids.variables import BIDSVariableCollection, merge_collections
+from bids.variables import BIDSRunVariableCollection, BIDSVariableCollection, merge_collections
+from bids.variables.collections import CollectionT
 
 from .model_spec import GLMMSpec, MetaAnalysisSpec
 from .report.utils import node_report, snake_to_camel
 
 
-def validate_model(model, *, stacklevel=2):  # noqa: D417
+def validate_model(model, *, stacklevel=2) -> bool:  # noqa: D417
     """Validate a BIDS-StatsModel structure.
 
     Parameters
@@ -124,7 +126,7 @@ class BIDSStatsModelsGraph:
         return self.get_node(key)
 
     @property
-    def root_node(self):
+    def root_node(self) -> str:
         """Returns the graph's root node."""
         return self._root_node
 
@@ -189,7 +191,7 @@ class BIDSStatsModelsGraph:
             raise KeyError(f'There is no node with the name "{name}".')
         return self.nodes[name]
 
-    def load_collections(self, nodes=None, drop_na=False, **kwargs):  # noqa: D417
+    def load_collections(self, nodes=None, drop_na=False, **kwargs) -> None:  # noqa: D417
         """Load collections in all nodes.
 
         Parameters
@@ -253,7 +255,7 @@ class BIDSStatsModelsGraph:
 
         return dot
 
-    def run_graph(self, entities=None, **kwargs):
+    def run_graph(self, entities=None, **kwargs) -> None:
         """Run the entire graph recursively.
 
         Parameters
@@ -581,7 +583,7 @@ class BIDSStatsModelsNode:
 
         return results
 
-    def add_child(self, edge):
+    def add_child(self, edge) -> None:
         """Add an edge to a child node.
 
         Parameters
@@ -592,7 +594,7 @@ class BIDSStatsModelsNode:
         """
         self.children.append(edge)
 
-    def add_parent(self, edge):
+    def add_parent(self, edge) -> None:
         """Add an edge to a parent node.
 
         Parameters
@@ -603,7 +605,7 @@ class BIDSStatsModelsNode:
         """
         self.parents.append(edge)
 
-    def add_collections(self, collections):
+    def add_collections(self, collections) -> None:
         """Add BIDSVariableCollections (i.e., predictors) to the current node.
 
         Parameters
@@ -620,7 +622,7 @@ class BIDSStatsModelsNode:
         """
         self._collections.extend(collections)
 
-    def get_collections(self, **filters):
+    def get_collections(self, **filters) -> list[BIDSVariableCollection]:
         """Returns BIDSVariableCollections at the current node.
 
         Parameters
@@ -643,7 +645,7 @@ class BIDSStatsModelsNode:
         return [c for c in self._collections if matches_entities(c, filters)]
 
 
-def expand_wildcards(selectors, pool):  # noqa: D103
+def expand_wildcards(selectors, pool) -> list[str]:  # noqa: D103
     out = list(selectors)
     for spec in selectors:
         if re.search(r'[\*\?\[\]]', spec):
@@ -823,19 +825,19 @@ class BIDSStatsModelsNodeOutput:
 
         self.report_ = node_report(self) if node_reports else None
 
-    def _collections_to_dfs(self, collections, *, collection_history=False):
+    def _collections_to_dfs(self, collections: list[CollectionT], *, collection_history=False):
         """Merges collections and converts them to a pandas DataFrame."""
         if not collections:
             return []
 
         # group all collections by level
-        coll_levels = defaultdict(list)
+        coll_levels: defaultdict[str, list[CollectionT]] = defaultdict(list)
         [coll_levels[coll.level].append(coll) for coll in collections]
 
         var_names = list(set(self.node.model['x']) - {1})
 
-        grp_dfs = []
-        trans_hist = []
+        grp_dfs: list[pd.DataFrame] = []
+        trans_hist: list[TransformationOutput] = []
         # merge all collections at each level and export to a DataFrame
         for level, colls in coll_levels.items():
             # Note: we currently merge _before_ selecting variables. Selecting
@@ -869,7 +871,7 @@ class BIDSStatsModelsNodeOutput:
 
             # run collections need to be handled separately because to_df()
             # takes extra arguments related to handling of time
-            if level == 'run':
+            if isinstance(coll, BIDSRunVariableCollection) and level == 'run':
                 if self.force_dense:
                     coll = coll.to_dense(sampling_rate=self.sampling_rate)
                 coll = coll.to_df(sampling_rate=self.sampling_rate)
@@ -899,7 +901,7 @@ class BIDSStatsModelsNodeOutput:
 
         """
         in_contrasts = self.node.contrasts.copy()
-        col_names = set(self.X.columns)
+        col_names = set(self.X.columns) if self.X is not None else set()
 
         # Create dummy contrasts as regular contrasts
         dummies = self.node.dummy_contrasts
@@ -976,7 +978,7 @@ class BIDSStatsModelsNodeOutput:
         return list(contrasts.values())
 
     @property
-    def X(self):
+    def X(self) -> pd.DataFrame | None:
         """Return design matrix via the current ModelSpec."""
         return self.model_spec.X
 

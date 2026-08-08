@@ -1,7 +1,7 @@
 """Classes for representing BIDS variables."""
 
 import sys
-from typing import Literal
+from typing import Literal, overload
 
 from numpy.typing import NDArray
 
@@ -18,11 +18,14 @@ from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 from functools import reduce
 from itertools import chain
+from typing import TypeVar
 
 import numpy as np
 import pandas as pd
 
 from bids.utils import listify
+
+T = TypeVar('T', bound='BIDSVariable')
 
 
 class BIDSVariable(metaclass=ABCMeta):
@@ -140,7 +143,7 @@ class BIDSVariable(metaclass=ABCMeta):
         return None
 
     @classmethod
-    def merge(cls, variables, name=None, **kwargs):
+    def merge(cls, variables: list[T], name: str | None = None, **kwargs) -> T:
         """Merge/concatenate a list of variables along the row axis.
 
         Parameters
@@ -184,7 +187,7 @@ class BIDSVariable(metaclass=ABCMeta):
     def _merge(cls, variables, name, **kwargs):
         pass
 
-    def get_grouper(self, groupby='run'):
+    def get_grouper(self, groupby='run') -> pd.Series:
         """Return a list suitable for use in groupby calls.
 
         Parameters
@@ -196,14 +199,14 @@ class BIDSVariable(metaclass=ABCMeta):
 
         Returns
         -------
-        list
-            A list defining the groups.
+        pd.Series
+            A Series defining the groups.
 
         """
         grouper = self.index.loc[:, groupby]
         return grouper.apply(lambda x: '@@@'.join(x.astype(str).values), axis=1)
 
-    def apply(self, func, groupby='run', *args, **kwargs):
+    def apply(self, func, groupby='run', *args, **kwargs) -> pd.DataFrame:
         """Applies the passed function to the groups defined by the groupby
         argument. Works identically to the standard pandas df.groupby() call.
 
@@ -221,7 +224,7 @@ class BIDSVariable(metaclass=ABCMeta):
         grouper = self.get_grouper(groupby)
         return self.values.groupby(grouper, group_keys=False).apply(func, *args, **kwargs)
 
-    def to_df(self, condition=True, entities=True, **kwargs):  # noqa: D417
+    def to_df(self, condition=True, entities=True, **kwargs) -> pd.DataFrame:  # noqa: D417
         """Convert to a DataFrame, with columns for name and entities.
 
         Parameters
@@ -313,7 +316,7 @@ class SimpleVariable(BIDSVariable):
 
         super().__init__(name, values, source)
 
-    def split(self, grouper):
+    def split(self, grouper) -> list[Self]:
         """Split the current SparseRunVariable into multiple columns.
 
         Parameters
@@ -346,13 +349,13 @@ class SimpleVariable(BIDSVariable):
         return subsets
 
     @classmethod
-    def _merge(cls, variables, name, **kwargs):
+    def _merge(cls, variables, name, **kwargs) -> Self:
         dfs = [v.to_df() for v in variables]
         data = pd.concat(dfs, axis=0, sort=True).reset_index(drop=True)
         data = data.rename(columns={name: 'amplitude'})
         return cls(name, data, source=variables[0].source, **kwargs)
 
-    def select_rows(self, rows):
+    def select_rows(self, rows) -> None:
         """Truncate internal arrays to keep only the specified rows.
 
         Parameters
@@ -399,7 +402,7 @@ class SparseRunVariable(SimpleVariable):
         self,
         name: str,
         data: pd.DataFrame,
-        run_info: list[RunInfo],
+        run_info: list[RunInfo] | RunInfo,
         source: Literal[
             'events', 'physio', 'stim', 'regressors', 'scans', 'sessions', 'participants', 'beh'
         ],
@@ -543,7 +546,7 @@ class DenseRunVariable(BIDSVariable):
 
         super().__init__(name, values, source)
 
-    def split(self, grouper):
+    def split(self, grouper) -> list['DenseRunVariable']:
         """Split the current DenseRunVariable into multiple columns.
 
         Parameters
@@ -607,7 +610,26 @@ class DenseRunVariable(BIDSVariable):
 
         return _create_index(all_keys, all_reps, all_ents)
 
-    def resample(self, sampling_rate, inplace=False, kind='linear'):
+    @overload
+    def resample(
+        self,
+        sampling_rate: float | int,
+        inplace: Literal[False] = False,
+        kind: Literal['linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'] = 'linear',
+    ) -> Self: ...
+    @overload
+    def resample(
+        self,
+        sampling_rate: float | int,
+        inplace: Literal[True],
+        kind: Literal['linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'] = 'linear',
+    ) -> None: ...
+    def resample(
+        self,
+        sampling_rate: float | int,
+        inplace: bool = False,
+        kind: Literal['linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'] = 'linear',
+    ):
         """Resample the Variable to the specified sampling rate.
 
         Parameters
@@ -651,7 +673,9 @@ class DenseRunVariable(BIDSVariable):
 
         self.sampling_rate = sampling_rate
 
-    def to_df(self, condition=True, entities=True, timing=True, sampling_rate=None, **kwargs):  # noqa: D417
+    def to_df(  # noqa: D417
+        self, condition=True, entities=True, timing=True, sampling_rate=None, **kwargs
+    ) -> pd.DataFrame:
         """Convert to a DataFrame, with columns for name and entities.
 
         Parameters
@@ -706,52 +730,25 @@ class DenseRunVariable(BIDSVariable):
         )
 
 
-def merge_variables(variables, **kwargs):
-    """Merge/concatenate a list of variables along the row axis.
+VariableT = TypeVar('VariableT', bound=BIDSVariable)
 
-    Parameters
-    ----------
-    variables : :obj:`list`
-        A list of Variables to merge.
-    kwargs
-        Optional keyword arguments to pass onto the class-specific merge() call.
 
-        Possible args:
-
-            sampling_rate (int, str):
-                The sampling rate to use if resampling
-                of DenseRunVariables is necessary for harmonization. If
-                'highest', the highest sampling rate found will be used. This
-                argument is only used when passing DenseRunVariables in the
-                variables list.
-
-    Returns
-    -------
-    A single BIDSVariable of the same class as the input variables.
-
-    Notes
-    -----
-    - Currently, this function only support homogeneously-typed lists. In
-      future, it may be extended to support implicit conversion.
-    - Variables in the list must all share the same name (i.e., it is not
-      possible to merge two different variables into a single variable.)
-
-    """
-    classes = set([v.__class__ for v in variables])  # noqa: C403
+def merge_variables(variables: list[VariableT], **kwargs) -> VariableT:
+    """Merge a homogeneous list of variables."""
+    classes = {type(variable) for variable in variables}
     if len(classes) > 1:
         raise ValueError(
-            'Variables of different classes cannot be merged. '  # noqa: UP031
-            'Variables passed are of classes: %s' % classes
+            'Variables of different classes cannot be merged. '
+            f'Variables passed are of classes: {classes}'
         )
-
-    sources = set([v.source for v in variables])  # noqa: C403
+    sources = {variable.source for variable in variables}
     if len(sources) > 1:
         raise ValueError(
-            'Variables extracted from different types of files '  # noqa: UP031
-            'cannot be merged. Sources found: %s' % sources
+            'Variables extracted from different types of files '
+            f'cannot be merged. Sources found: {sources}'
         )
-
-    return list(classes)[0].merge(variables, **kwargs)
+    cls: type[VariableT] = variables[0].__class__
+    return cls.merge(variables, **kwargs)
 
 
 def _resample(y, new_sr, old_sr, new_num, kind='linear'):

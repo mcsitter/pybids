@@ -5,16 +5,17 @@ methods section from a BIDS dataset.
 """
 
 import logging
+from collections.abc import Sequence
 
 LOGGER = logging.getLogger('pybids.reports.utils')
 
 
-def reminder():
+def reminder() -> str:
     """Remind users about things they need to do after generating the report."""
     return 'Remember to double-check everything and to replace <deg> with a degree symbol.'
 
 
-def remove_duplicates(seq):
+def remove_duplicates(seq: Sequence) -> list[object]:
     """Return unique elements from list while preserving order.
 
     From https://stackoverflow.com/a/480227/2589328
@@ -24,7 +25,7 @@ def remove_duplicates(seq):
     return [x for x in seq if not (x in seen or seen_add(x))]
 
 
-def num_to_str(num):
+def num_to_str(num) -> str:
     """Convert an int or float to a nice string.
 
     E.g.,
@@ -35,7 +36,7 @@ def num_to_str(num):
     return f'{num:0.02f}'.rstrip('0').rstrip('.')
 
 
-def list_to_str(lst):
+def list_to_str(lst) -> str:
     """Turn a list into a comma- and/or and-separated string.
 
     Parameters

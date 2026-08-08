@@ -130,7 +130,9 @@ def _write_report(report_dict, out_dir, template_path=None):
     Path.write_text(out_path / f'{model}_report.html', html)
 
 
-def generate_report(model, dataset_path, derivatives, output_dir, scan_length=None, **entities):
+def generate_report(
+    model, dataset_path, derivatives, output_dir, scan_length=None, **entities
+) -> None:
     """Generate a report for a model.
 
     Parameters

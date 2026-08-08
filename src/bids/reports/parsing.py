@@ -6,6 +6,8 @@ import warnings
 import nibabel as nib
 from num2words import num2words
 
+from bids.layout import BIDSFile
+
 from .. import __version__
 from ..utils import collect_associated_files
 from . import parameters
@@ -13,7 +15,7 @@ from . import parameters
 LOGGER = logging.getLogger('pybids.reports.parsing')
 
 
-def func_info(layout, files, config):
+def func_info(layout, files, config) -> str:
     """Generate a paragraph describing T2*-weighted functional scans.
 
     Parameters
@@ -78,7 +80,7 @@ def func_info(layout, files, config):
     return desc
 
 
-def anat_info(layout, files, config):
+def anat_info(layout, files, config) -> str:
     """Generate a paragraph describing T1- and T2-weighted structural scans.
 
     Parameters
@@ -137,7 +139,7 @@ def anat_info(layout, files, config):
     return desc
 
 
-def dwi_info(layout, files, config):
+def dwi_info(layout, files, config) -> str:
     """Generate a paragraph describing DWI scan acquisition information.
 
     Parameters
@@ -200,7 +202,7 @@ def dwi_info(layout, files, config):
     return desc
 
 
-def fmap_info(layout, files, config):
+def fmap_info(layout, files, config) -> str:
     """Generate a paragraph describing field map acquisition information.
 
     Parameters
@@ -255,7 +257,7 @@ def fmap_info(layout, files, config):
     return desc
 
 
-def general_acquisition_info(metadata):
+def general_acquisition_info(metadata) -> str:
     """General sentence on data acquisition.
 
     This should be the first sentence in the MRI data acquisition section.
@@ -279,7 +281,7 @@ def general_acquisition_info(metadata):
     return out_str
 
 
-def final_paragraph(metadata):
+def final_paragraph(metadata) -> str:
     """Describe dicom-to-nifti conversion process and methods generation.
 
     Parameters
@@ -307,7 +309,7 @@ def final_paragraph(metadata):
     return desc
 
 
-def parse_files(layout, data_files, sub, config):
+def parse_files(layout, data_files, sub, config) -> list[str]:
     """Loop through files in a BIDSLayout and generate appropriate descriptions.
 
     Then, compile all of the descriptions into a list.
@@ -328,41 +330,36 @@ def parse_files(layout, data_files, sub, config):
 
 
 # Indirection to allow warnings to be raised in user-written code
-def _parse_files(layout, data_files, sub, config, *, stacklevel=3):
-    # Group files into individual runs
+def _parse_files(
+    layout,
+    data_files: list[list[BIDSFile]],
+    sub,
+    config,
+    *,
+    stacklevel: int = 3,
+) -> list[str]:
+    # Group files into runs
     data_files = collect_associated_files(layout, data_files, extra_entities=['run'])
-
-    description_list = []
-    # Assume all data have same basic info
-    description_list.append(general_acquisition_info(data_files[0][0].get_metadata()))
-
+    description_list: list[str] = []
+    first_file = data_files[0][0]
+    description_list.append(general_acquisition_info(first_file.get_metadata()))
     for group in data_files:
-        if group[0].entities['datatype'] == 'func':
+        first_file = group[0]
+        datatype = first_file.entities['datatype']
+        suffix = first_file.entities['suffix']
+        if datatype == 'func':
             group_description = func_info(layout, group, config)
-
-        elif (group[0].entities['datatype'] == 'anat') and group[0].entities['suffix'].endswith(
-            'w'
-        ):
+        elif datatype == 'anat' and suffix is not None and suffix.endswith('w'):
             group_description = anat_info(layout, group, config)
-
-        elif group[0].entities['datatype'] == 'dwi':
+        elif datatype == 'dwi':
             group_description = dwi_info(layout, group, config)
-
-        elif (group[0].entities['datatype'] == 'fmap') and group[0].entities[
-            'suffix'
-        ] == 'phasediff':
+        elif datatype == 'fmap' and suffix == 'phasediff':
             group_description = fmap_info(layout, group, config)
-
-        elif group[0].entities['datatype'] in ['eeg', 'meg', 'beh', 'perf']:
-            warnings.warn(
-                group[0].entities['datatype'] + ' not yet supported.', stacklevel=stacklevel
-            )
+        elif datatype in ['eeg', 'meg', 'beh', 'perf']:
+            warnings.warn(f'{datatype} not yet supported.', stacklevel=stacklevel)
             continue
-
         else:
-            warnings.warn(group[0].filename + ' not yet supported.', stacklevel=stacklevel)
+            warnings.warn(f'{first_file.filename} not yet supported.', stacklevel=stacklevel)
             continue
-
         description_list.append(group_description)
-
     return description_list

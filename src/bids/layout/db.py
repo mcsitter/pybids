@@ -7,6 +7,7 @@ from functools import lru_cache
 import sqlalchemy as sa
 from sqlalchemy.event import listens_for
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm.session import Session
 from upath import UPath as Path
 
 from bids.utils import listify
@@ -14,7 +15,7 @@ from bids.utils import listify
 from .models import Base, Config, LayoutInfo
 
 
-def get_database_file(path):  # noqa: D103
+def get_database_file(path: str | Path | None) -> Path | None:  # noqa: D103
     if path is not None:
         path = Path(path)
         database_file = path / 'layout_index.sqlite'
@@ -25,7 +26,13 @@ def get_database_file(path):  # noqa: D103
 
 
 class ConnectionManager:  # noqa: D101
-    def __init__(self, database_path=None, reset_database=False, config=None, init_args=None):
+    def __init__(
+        self,
+        database_path: str | None = None,
+        reset_database: bool = False,
+        config=None,
+        init_args=None,
+    ):
         self.database_file = get_database_file(database_path)
 
         # Determine if file exists before we create it in _get_engine()
@@ -36,7 +43,7 @@ class ConnectionManager:  # noqa: D101
         )
 
         self.engine = self._get_engine(self.database_file)
-        self.sessionmaker = sessionmaker(bind=self.engine)
+        self.sessionmaker: sessionmaker[Session] = sessionmaker(bind=self.engine)
         self._session = None
 
         if reset_database:
@@ -99,9 +106,10 @@ class ConnectionManager:  # noqa: D101
 
     @classmethod
     def exists(cls, database_path):  # noqa: D102
-        return get_database_file(database_path).exists()
+        database_file = get_database_file(database_path)
+        return database_file is not None and database_file.exists()
 
-    def reset_database(self, init_args, config):  # noqa: D102
+    def reset_database(self, init_args, config) -> None:  # noqa: D102
         Base.metadata.drop_all(self.engine)
         Base.metadata.create_all(self.engine)
         # Add LayoutInfo record
@@ -113,7 +121,7 @@ class ConnectionManager:  # noqa: D101
         self.session.add_all(config)
         self.session.commit()
 
-    def save_database(self, database_path, replace_connection=True):
+    def save_database(self, database_path, replace_connection=True) -> 'ConnectionManager':
         """Save the current index as a SQLite3 DB at the specified location.
 
         Note: This is only necessary if a database_path was not specified
@@ -155,9 +163,9 @@ class ConnectionManager:  # noqa: D101
 
     @property
     @lru_cache  # noqa: B019
-    def layout_info(self):  # noqa: D102
+    def layout_info(self) -> LayoutInfo | None:  # noqa: D102
         return self.session.query(LayoutInfo).first()
 
-    def reset_session(self):
+    def reset_session(self) -> None:
         """Force a new session."""
         self._session = self.sessionmaker()

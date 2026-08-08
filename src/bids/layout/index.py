@@ -5,6 +5,7 @@ import re
 import warnings
 from collections import defaultdict
 from functools import cache, partial
+from re import Pattern
 from typing import TYPE_CHECKING
 
 from bids_validator import BIDSValidator
@@ -31,8 +32,8 @@ def _regexfy(patt, root=None):
     return re.compile(r'^/' + str(patt) + r'.*')
 
 
-def _extract_entities(bidsfile, entities):
-    match_vals = {}
+def _extract_entities(bidsfile, entities: dict[str, Entity]):
+    match_vals: dict[str, tuple[Entity, object]] = {}
     for e in entities.values():
         m = e.match_file(bidsfile)
         if m is None and e.mandatory:
@@ -42,33 +43,38 @@ def _extract_entities(bidsfile, entities):
     return match_vals
 
 
-def _check_path_matches_patterns(path, patterns, root=None):
+def _check_path_matches_patterns(
+    path: Path, patterns: list[Pattern] | None, root: Path | None = None
+) -> bool:
     """Check if the path matches at least one of the provided patterns."""
     if not patterns:
         return False
 
     path = path.absolute()
     if root is not None:
-        if isinstance(path, Path):
-            path = Path('/') / Path(path.path).relative_to(Path(root.path))
+        if not isinstance(path, Path):
+            root = Path(root) / Path(path.path).relative_to(Path(root.path))
         else:
             path = Path('/') / path.relative_to(root)
 
     # Path now can be downcast to str
-    path = str(path)
+    path_str = str(path)
 
     for patt in patterns:
-        if patt.search(path):
+        if patt.search(path_str):
             return True
     return False
 
 
-def _validate_path(path, incl_patt=None, excl_patt=None, root=None):
+def _validate_path(
+    path, incl_patt: list[Pattern] | None = None, excl_patt=None, root: Path | None = None
+) -> bool | None:
     if _check_path_matches_patterns(path, incl_patt, root=root):
         return True
 
     if _check_path_matches_patterns(path, excl_patt, root=root):
         return False
+    return None
 
 
 class BIDSLayoutIndexer:
@@ -114,6 +120,8 @@ class BIDSLayoutIndexer:
 
     _layout: 'BIDSLayout'
     _config: list[Config]
+    _include_patterns: list[Pattern] | None
+    _exclude_patterns: list[Pattern] | None
 
     def __init__(
         self,
@@ -165,7 +173,7 @@ class BIDSLayoutIndexer:
     def session(self):  # noqa: D102
         return self._layout.connection_manager.session
 
-    def _validate_file(self, f):
+    def _validate_file(self, f: Path) -> bool:
         matched_patt = _validate_path(
             f,
             incl_patt=self._include_patterns,
@@ -190,7 +198,7 @@ class BIDSLayoutIndexer:
         to_check = to_check.as_posix()
         return self.validator.is_bids(to_check)
 
-    def _index_dir(self, path, config, force=None):
+    def _index_dir(self, path: Path, config, force=None):
         root_path = Path(self._layout._root.path)  # drops the uri prefix if it is there
         abs_path = root_path / Path(path.path).relative_to(root_path)
 

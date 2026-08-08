@@ -8,7 +8,7 @@ from bids.layout import BIDSLayout
 
 
 @pytest.fixture(scope='session')
-def testlayout(tests_dir):
+def testlayout(tests_dir) -> BIDSLayout:
     """A BIDSLayout for testing."""
     return BIDSLayout(tests_dir / 'data' / 'synthetic')
 

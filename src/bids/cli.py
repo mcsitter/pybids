@@ -52,7 +52,7 @@ class Either(click.ParamType):
         self.types = types
 
     @property
-    def name(self):  # noqa: D102
+    def name(self) -> str:  # noqa: D102
         tpstrings = tuple(tp.name for tp in self.types)  # noqa: F841
         return 'any type in {tpstrings}'
 
@@ -82,7 +82,7 @@ class PathOrRegex(click.ParamType):
 
 @click.group(context_settings=CONTEXT_SETTINGS)
 @click.version_option(__version__, prog_name='pybids')
-def cli():
+def cli() -> None:
     """Command-line interface for PyBIDS operations"""
     pass
 
@@ -152,7 +152,7 @@ def layout(
     ignore,
     force_index,
     config_filename,
-):
+) -> None:
     """Initialize a BIDSLayout, and create an SQLite database index."""
     # ensure empty multiples are set to None
     derivatives = _validate_multiple(derivatives, retval=False)
@@ -188,7 +188,7 @@ def layout(
 
 @cli.command(context_settings=CONTEXT_SETTINGS)
 @click.argument('root', type=click.Path(file_okay=False, exists=True))
-def upgrade(root):
+def upgrade(root) -> None:
     """Upgrade common experimental BIDS features to finalized versions."""
     click.echo(
         'WARNING. This upgrade tool is EXPERIMENTAL and MAY damage your '
@@ -252,7 +252,7 @@ def upgrade_dataset_description(description):
     return description
 
 
-def upgrade_filenames(root, description):  # noqa: D103
+def upgrade_filenames(root, description) -> None:  # noqa: D103
     dstype = description['DatasetType']
     layout = BIDSLayout(root, validate=False, config='bids' if dstype == 'raw' else 'derivatives')
 
@@ -299,7 +299,7 @@ def upgrade_filenames(root, description):  # noqa: D103
 )
 def model_report(
     model, root, derivatives, output_dir, scan_length, sub_label, ses_label, task_label, run_label
-):
+) -> None:
     """Generate a report of a BIDS StatsModel."""
     entities = {'subject': sub_label, 'session': ses_label, 'task': task_label, 'run': run_label}
 

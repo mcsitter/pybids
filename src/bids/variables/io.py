@@ -24,7 +24,7 @@ def load_variables(  # noqa: D417
     scope='all',
     regex_search=None,
     **kwargs,
-):
+) -> NodeIndex:
     """A convenience wrapper for one or more load_*_variables() calls.
 
     Parameters

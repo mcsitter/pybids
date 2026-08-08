@@ -14,6 +14,7 @@ from itertools import chain
 from typing import TYPE_CHECKING, Literal, overload
 
 import sqlalchemy as sa
+import sqlalchemy.orm
 from bids_validator import BIDSValidator
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import cast
@@ -165,6 +166,11 @@ class BIDSLayout:
         if load_db:
             self.connection_manager = ConnectionManager(database_path)
             info = self.connection_manager.layout_info
+            if info is None:
+                raise ValueError(
+                    'The database at %s does not contain layout information. '  # noqa: UP031
+                    'Please reindex the dataset with reset_database=True.' % database_path
+                )
             # Overwrite init args with values in DB
             root = Path(info.root)
             derivatives = info.derivatives
@@ -318,7 +324,7 @@ class BIDSLayout:
             ]
         )
 
-    def _get_layouts_in_scope(self, scope):
+    def _get_layouts_in_scope(self, scope: Scope) -> list['BIDSLayout']:
         """Return all layouts in the passed scope."""
         if scope == 'self':
             return [self]
@@ -387,7 +393,7 @@ class BIDSLayout:
         """
         return cls(database_path=database_path)
 
-    def save(self, database_path, replace_connection=True):
+    def save(self, database_path, replace_connection=True) -> None:
         """Save the current index as a SQLite3 DB at the specified location.
 
         Note: This is only necessary if a database_path was not specified
@@ -421,7 +427,7 @@ class BIDSLayout:
         for pipeline_name, der in self.derivatives.items():
             der.save(database_path / pipeline_name)
 
-    def get_entities(self, scope='all', metadata=None):
+    def get_entities(self, scope='all', metadata=None) -> dict[str, Entity]:
         """Get entities for all layouts in the specified scope.
 
         Parameters
@@ -640,7 +646,7 @@ class BIDSLayout:
                     for dd in p.glob('*/dataset_description.json')
                 )
 
-    def add_derivatives(self, path, parent_database_path=None, **kwargs):
+    def add_derivatives(self, path, parent_database_path=None, **kwargs) -> None:
         """Add BIDS-Derivatives datasets to tracking.
 
         Parameters
@@ -876,7 +882,7 @@ class BIDSLayout:
                 'If return_type is "id" or "dir", a valid target entity must also be specified.'
             )
 
-        results = []
+        results: list[BIDSFile] = []
         for l in layouts:  # noqa: E741
             query = l._build_file_query(filters=filters, regex_search=regex_search)
             # NOTE: The following line, when uncommented, eager loads
@@ -945,7 +951,7 @@ class BIDSLayout:
 
         return results
 
-    def get_file(self, filename, scope='all'):
+    def get_file(self, filename: str | Path, scope: Scope = 'all') -> BIDSFile | None:
         """Return the BIDSFile object with the specified path.
 
         Parameters
@@ -971,7 +977,7 @@ class BIDSLayout:
                 return result
         return None
 
-    def _build_file_query(self, **kwargs):
+    def _build_file_query(self, **kwargs) -> 'sqlalchemy.orm.Query':
         query = self.session.query(BIDSFile).filter_by(is_dir=False)
 
         filters = kwargs.get('filters')
@@ -1098,7 +1104,7 @@ class BIDSLayout:
         index = load_variables(self, types=types, levels=level, skip_empty=skip_empty, **kwargs)
         return index.get_collections(level, variables, merge, sampling_rate=sampling_rate)
 
-    def get_metadata(self, path, include_entities=False, scope='all'):
+    def get_metadata(self, path: str | Path, include_entities: bool = False, scope='all') -> dict:
         """Return metadata found in JSON sidecars for the specified file.
 
         Parameters
@@ -1143,7 +1149,17 @@ class BIDSLayout:
 
         return md
 
-    def get_dataset_description(self, scope='self', all_=False):
+    @overload
+    def get_dataset_description(
+        self, scope: Scope = 'self', all_: Literal[False] = False
+    ) -> dict[str, object]: ...
+    @overload
+    def get_dataset_description(
+        self, scope: Scope = 'self', all_: Literal[True] = True
+    ) -> list[dict[str, object]]: ...
+    def get_dataset_description(
+        self, scope='self', all_=False
+    ) -> dict[str, object] | list[dict[str, object]]:
         """Return contents of dataset_description.json.
 
         Parameters
@@ -1166,9 +1182,13 @@ class BIDSLayout:
 
         """
         layouts = self._get_layouts_in_scope(scope)
-        if not all_:
-            return layouts[0].get_file('dataset_description.json').get_dict()
-        return [l.get_file('dataset_description.json').get_dict() for l in layouts]  # noqa: E741
+        descriptions = []
+        for layout in layouts:
+            file = layout.get_file('dataset_description.json')
+            if file is None:
+                raise ValueError('No dataset_description.json found.')
+            descriptions.append(file.get_dict())
+        return descriptions if all_ else descriptions[0]
 
     def get_nearest(  # noqa: D417
         self,
@@ -1210,6 +1230,12 @@ class BIDSLayout:
         # Make sure we have a valid suffix
         if not filters.get('suffix'):
             f = self.get_file(path)
+            if f is None:
+                raise BIDSValidationError(
+                    "File '%s' is not tracked in this layout, so we cannot "  # noqa: UP031
+                    'determine its suffix. Please specify a suffix in the '
+                    'filters argument.' % path
+                )
             if 'suffix' not in f.entities:
                 raise BIDSValidationError(
                     "File '%s' does not have a valid suffix, most "  # noqa: UP031
@@ -1280,16 +1306,24 @@ class BIDSLayout:
         matches = [match.path if return_type.startswith('file') else match for match in matches]
         return matches if all_ else matches[0] if matches else None
 
-    def get_bvec(self, path, **kwargs):
+    def get_bvec(self, path, **kwargs) -> str | None:
         """Get bvec file for passed path."""
         result = self.get_nearest(path, extension='.bvec', suffix='dwi', all_=True, **kwargs)
         return listify(result)[0]
 
-    def get_bval(self, path, **kwargs):
+    def get_bval(self, path, **kwargs) -> str | None:
         """Get bval file for passed path."""
         result = self.get_nearest(path, suffix='dwi', extension='.bval', all_=True, **kwargs)
         return listify(result)[0]
 
+    @overload
+    def get_fieldmap(
+        self, path: str | Path, return_list: Literal[False] = False
+    ) -> dict[str, str] | None: ...
+    @overload
+    def get_fieldmap(
+        self, path: str | Path, return_list: Literal[True] = True
+    ) -> list[dict[str, str]]: ...
     def get_fieldmap(self, path, return_list=False):
         """Get fieldmap(s) for specified path."""
         fieldmaps = self._get_fieldmaps(path)
@@ -1352,7 +1386,7 @@ class BIDSLayout:
                     fieldmap_set.append(cur_fieldmap)
         return fieldmap_set
 
-    def get_tr(self, derivatives=False, **filters):
+    def get_tr(self, derivatives=False, **filters) -> float:
         """Return the scanning repetition time (TR) for one or more runs.
 
         Parameters
@@ -1392,12 +1426,12 @@ class BIDSLayout:
 
     def build_path(
         self,
-        source,
-        path_patterns=None,
-        strict=False,
-        scope='all',
-        validate=True,
-        absolute_paths=True,
+        source: str | Path | BIDSFile | dict[str, str | None],
+        path_patterns: list[str] | None = None,
+        strict: bool = False,
+        scope: Scope = 'all',
+        validate: bool = True,
+        absolute_paths: bool = True,
     ):
         """Construct a target filename for a file or dictionary of entities.
 
@@ -1451,7 +1485,11 @@ class BIDSLayout:
             if source not in self.files:
                 source = self._root / source
 
-            source = self.get_file(source)
+            source = self.get_file(source)  # ty: ignore[invalid-assignment]
+            if not isinstance(source, BIDSFile):
+                raise ValueError(
+                    f'Cannot build path for {source}. It is not a valid BIDSFile in this layout.'
+                )
 
         if isinstance(source, BIDSFile):
             source = source.entities
@@ -1481,9 +1519,9 @@ class BIDSLayout:
             )
 
         if absolute_paths:
-            built = self._root / built  # type: pathlib.Path
+            built = self._root / built
             # convert into a posix path for consistency with `writing.build_path`
-            built = built.as_posix()  # type: str
+            built = built.as_posix()
 
         return built
 
@@ -1495,7 +1533,7 @@ class BIDSLayout:
         root=None,
         conflicts='fail',
         **kwargs,
-    ):
+    ) -> None:
         """Copy BIDSFile(s) to new locations.
 
         The new locations are defined by each BIDSFile's entities and the
@@ -1545,7 +1583,7 @@ class BIDSLayout:
         conflicts='fail',
         strict=False,
         validate=True,
-    ):
+    ) -> None:
         """Write data to a file defined by the passed entities and patterns.
 
         Parameters

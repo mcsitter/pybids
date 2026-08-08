@@ -55,6 +55,9 @@ class GLMMSpec(ModelSpec):
 
     """
 
+    X: pd.DataFrame
+    Z: pd.DataFrame
+
     def __init__(
         self,
         terms=None,
@@ -85,10 +88,10 @@ class GLMMSpec(ModelSpec):
     def __repr__(self):
         return f"<{self.__class__.__name__}{[term.name for term in self.fixed_terms]}'>"
 
-    def set_priors(self, fixed=None, random=None):  # noqa: D102
+    def set_priors(self, fixed=None, random=None) -> None:  # noqa: D102
         raise NotImplementedError("Custom prior use hasn't been implemented yet.")
 
-    def build_fixed_terms(self, X):
+    def build_fixed_terms(self, X) -> None:
         """Build one or more fixed terms from the columns of a pandas DF.
 
         Parameters
@@ -108,7 +111,7 @@ class GLMMSpec(ModelSpec):
 
     def build_variance_components(
         self, Z, groups: np.ndarray | pd.DataFrame | None = None, sigma=None, names=None
-    ):
+    ) -> None:
         """Build one or more variance components from the columns of a binary
         grouping matrix and variance specification.
 
@@ -146,7 +149,7 @@ class GLMMSpec(ModelSpec):
             vc = VarComp(names[i], z_grp)
             self.add_term(vc)
 
-    def add_term(self, term):
+    def add_term(self, term) -> None:
         """Add a new Term to the instance.
 
         Parameters
@@ -160,7 +163,7 @@ class GLMMSpec(ModelSpec):
         self.terms[term.name] = term
 
     @property
-    def X(self):
+    def X(self) -> pd.DataFrame | None:
         """Return X design matrix (i.e., fixed component of model)."""
         if not self.fixed_terms:
             return None
@@ -168,7 +171,7 @@ class GLMMSpec(ModelSpec):
         return pd.DataFrame(np.c_[cols], columns=names)
 
     @property
-    def Z(self):
+    def Z(self) -> pd.DataFrame | None:
         """Return Z design matrix (i.e., random effects/variance components)."""
         if not self.variance_components:
             return None
@@ -179,12 +182,12 @@ class GLMMSpec(ModelSpec):
         return pd.DataFrame(np.concatenate(cols, axis=1), columns=names)
 
     @property
-    def fixed_terms(self):
+    def fixed_terms(self) -> list['Term']:
         """Return a list of all available fixed effects."""
         return [t for t in self.terms.values() if not isinstance(t, VarComp)]
 
     @property
-    def variance_components(self):
+    def variance_components(self) -> list['VarComp']:
         """Return a list of all available variance components."""
         return [t for t in self.terms.values() if isinstance(t, VarComp)]
 

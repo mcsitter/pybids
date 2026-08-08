@@ -37,7 +37,7 @@ class Node:
             self.base_ents = None
         self.variables = {}
 
-    def add_variable(self, variable):
+    def add_variable(self, variable) -> None:
         """Adds a BIDSVariable to the current Node's list.
 
         Parameters
@@ -51,6 +51,18 @@ class Node:
                 if e in variable.entities and variable.entities[e] != val:
                     raise ValueError('Variable and node entity mismatch.')
         self.variables[variable.name] = variable
+
+
+# Stores key information for each Run.
+RunInfo_ = namedtuple('RunInfo_', ['entities', 'duration', 'tr', 'image', 'n_vols'])
+
+
+# Wrap with class to provide docstring
+class RunInfo(RunInfo_):
+    """A namedtuple storing run-related information.
+
+    Properties include 'entities', 'duration', 'tr', and 'image', 'n_vols'.
+    """
 
 
 class RunNode(Node):
@@ -80,25 +92,13 @@ class RunNode(Node):
         self.n_vols = n_vols
         super().__init__('run', entities)
 
-    def get_info(self):  # noqa: D102
+    def get_info(self) -> RunInfo:  # noqa: D102
         # Note: do not remove the dict() call! self.entities is a SQLAlchemy
         # association_proxy mapping, and without the conversion, the connection
         # to the DB persists, causing problems on Python 3.5 if we try to clone
         # a RunInfo or any containing object.
         entities = dict(self.entities)
         return RunInfo(entities, self.duration, self.repetition_time, self.image_file, self.n_vols)
-
-
-# Stores key information for each Run.
-RunInfo_ = namedtuple('RunInfo_', ['entities', 'duration', 'tr', 'image', 'n_vols'])
-
-
-# Wrap with class to provide docstring
-class RunInfo(RunInfo_):
-    """A namedtuple storing run-related information.
-
-    Properties include 'entities', 'duration', 'tr', and 'image', 'n_vols'.
-    """
 
 
 class NodeIndex:
@@ -108,6 +108,20 @@ class NodeIndex:
         super().__init__()
         self.index = pd.DataFrame()
         self.nodes = []
+
+    @overload
+    def get_collections(
+        self,
+        unit: Literal['run'],
+        names=None,
+        merge: Literal[False] = False,
+        sampling_rate=None,
+        **entities,
+    ) -> list[clc.BIDSRunVariableCollection]: ...
+    @overload
+    def get_collections(
+        self, unit: str, names=None, merge: Literal[True] = True, sampling_rate=None, **entities
+    ) -> list[clc.BIDSVariableCollection]: ...
 
     def get_collections(self, unit, names=None, merge=False, sampling_rate=None, **entities):
         """Retrieve variable data for a specified level in the Dataset.
