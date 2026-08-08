@@ -32,6 +32,22 @@ class frozendict(_frozendict):
         return repr({k: v for k, v in self.items()})  # noqa: C416
 
 
+@overload
+def listify(obj: list[T]) -> list[T]: ...
+
+
+@overload
+def listify(obj: tuple[T, ...]) -> tuple[T, ...]: ...
+
+
+@overload
+def listify(obj: None) -> None: ...
+
+
+@overload
+def listify(obj: T | list[T]) -> list[T]: ...
+
+
 def listify(obj):
     """Wraps all non-list or tuple objects in a list; provides a simple way
     to accept flexible arguments.

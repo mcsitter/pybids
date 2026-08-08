@@ -211,7 +211,7 @@ class SphinxObjDoc(SphinxDocString):  # noqa: D101
         SphinxDocString.__init__(self, doc, config=config)
 
 
-def get_doc_object(obj, what=None, doc=None, config={}):  # noqa: B006, D103
+def get_doc_object(obj, what=None, doc=None, config={}) -> SphinxDocString:  # noqa: B006, D103
     if what is None:
         if inspect.isclass(obj):
             what = 'class'

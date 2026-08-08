@@ -138,7 +138,7 @@ def _sort_patterns(patterns, root: Path) -> list[Path | re.Pattern]:  # noqa: D1
     return [Path(p) for p in reversed(paths)] + regexes
 
 
-def validate_indexing_args(ignore, force_index, root):  # noqa: D103
+def validate_indexing_args(ignore, force_index, root) -> tuple[list, list]:  # noqa: D103
     if ignore is None:
         ignore = DEFAULT_LOCATIONS_TO_IGNORE - set(force_index or [])
 

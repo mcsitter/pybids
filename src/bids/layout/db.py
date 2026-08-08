@@ -26,6 +26,8 @@ def get_database_file(path: str | Path | None) -> Path | None:  # noqa: D103
 
 
 class ConnectionManager:  # noqa: D101
+    _session: Session | None
+
     def __init__(
         self,
         database_path: str | None = None,
@@ -156,9 +158,11 @@ class ConnectionManager:  # noqa: D101
             return self
 
     @property
-    def session(self):  # noqa: D102
+    def session(self) -> Session:  # noqa: D102
         if self._session is None:
             self.reset_session()
+        if self._session is None:
+            raise RuntimeError('Session could not be created.')
         return self._session
 
     @property

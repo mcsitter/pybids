@@ -32,7 +32,7 @@ class Reader:
     def reset(self) -> None:  # noqa: D102
         self._l = 0  # current line nr
 
-    def read(self):  # noqa: D102
+    def read(self) -> str:  # noqa: D102
         if not self.eof():
             out = self[self._l]
             self._l += 1
@@ -47,10 +47,10 @@ class Reader:
             else:
                 self._l += 1
 
-    def eof(self):  # noqa: D102
+    def eof(self) -> bool:  # noqa: D102
         return self._l >= len(self._str)
 
-    def read_to_condition(self, condition_func):  # noqa: D102
+    def read_to_condition(self, condition_func) -> list[str]:  # noqa: D102
         start = self._l
         for line in self[start:]:
             if condition_func(line):
@@ -60,7 +60,7 @@ class Reader:
                 return self[start : self._l + 1]
         return []
 
-    def read_to_next_empty_line(self):  # noqa: D102
+    def read_to_next_empty_line(self) -> list[str]:  # noqa: D102
         self.seek_next_non_empty_line()
 
         def is_empty(line):
@@ -68,13 +68,13 @@ class Reader:
 
         return self.read_to_condition(is_empty)
 
-    def read_to_next_unindented_line(self):  # noqa: D102
+    def read_to_next_unindented_line(self) -> list[str]:  # noqa: D102
         def is_unindented(line):
             return line.strip() and (len(line.lstrip()) == len(line))
 
         return self.read_to_condition(is_unindented)
 
-    def peek(self, n=0):  # noqa: D102
+    def peek(self, n=0) -> str:  # noqa: D102
         if self._l + n < len(self._str):
             return self[self._l + n]
         else:
@@ -440,7 +440,7 @@ class NumpyDocString(collections.abc.Mapping):  # noqa: D101
         return '\n'.join(out)
 
 
-def indent(str, indent=4):  # noqa: A002, D103
+def indent(str, indent=4) -> str:  # noqa: A002, D103
     indent_str = ' ' * indent
     if str is None:
         return indent_str
@@ -448,12 +448,12 @@ def indent(str, indent=4):  # noqa: A002, D103
     return '\n'.join(indent_str + l for l in lines)  # noqa: E741
 
 
-def dedent_lines(lines):
+def dedent_lines(lines) -> str:  # noqa: D103
     """Deindent a list of lines maximally"""
     return textwrap.dedent('\n'.join(lines)).split('\n')
 
 
-def header(text, style='-'):  # noqa: D103
+def header(text, style='-') -> str:  # noqa: D103
     return text + '\n' + style * len(text) + '\n'
 
 
@@ -480,7 +480,7 @@ class FunctionDoc(NumpyDocString):  # noqa: D101
                 signature = '%s()' % func_name  # noqa: UP031
             self['Signature'] = signature
 
-    def get_func(self):  # noqa: D102
+    def get_func(self) -> tuple[str, str]:  # noqa: D102
         func_name = getattr(self._f, '__name__', self.__class__.__name__)
         if inspect.isclass(self._f):
             func = getattr(self._f, '__call__', self._f.__init__)  # noqa: B004
@@ -546,7 +546,7 @@ class ClassDoc(NumpyDocString):  # noqa: D101
                     self[field] = doc_list
 
     @property
-    def methods(self):  # noqa: D102
+    def methods(self) -> list[str]:  # noqa: D102
         if self._cls is None:
             return []
         return [
@@ -560,7 +560,7 @@ class ClassDoc(NumpyDocString):  # noqa: D101
         ]
 
     @property
-    def properties(self):  # noqa: D102
+    def properties(self) -> list[str]:  # noqa: D102
         if self._cls is None:
             return []
         return [

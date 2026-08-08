@@ -1,6 +1,7 @@
 import json  # noqa: D100
 import warnings
 from importlib.resources import files
+from importlib.resources.abc import Traversable
 
 import pytest
 
@@ -14,7 +15,7 @@ def testlayout(tests_dir) -> BIDSLayout:
 
 
 @pytest.fixture(scope='session')
-def config_file():  # noqa: D103
+def config_file() -> Traversable:  # noqa: D103
     # PY39: config isn't a module, so can't be used in files()
     # This is relaxed in more recent Pythons
     return files('bids.reports') / 'config' / 'converters.json'

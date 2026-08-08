@@ -14,7 +14,7 @@ class ModelSpec(metaclass=ABCMeta):
     """Base class for all ModelSpec classes."""
 
     @abstractmethod
-    def from_df(self, df, model, metadata=None):
+    def from_df(self, df: pd.DataFrame, model, metadata=None) -> 'ModelSpec':
         """Initialize from a pandas DataFrame."""
 
 

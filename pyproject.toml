@@ -147,7 +147,10 @@ include = [
 invalid-assignment = "ignore"
 
 [[tool.ty.overrides]]
-include = ["src/bids/variables/variables.py"]
+include = [
+  "src/bids/variables/variables.py",
+  "src/bids/layout/index.py",
+]
 
 [tool.ty.overrides.rules]
 unused-ignore-comment = "ignore"  # Due to changed function signature of np.gcd.reduce in numpy

@@ -17,6 +17,8 @@ from .models import Config, Entity, FileAssociation, Tag, _create_tag_dict
 from .validation import validate_indexing_args
 
 if TYPE_CHECKING:
+    from sqlalchemy.orm.session import Session
+
     from .layout import BIDSLayout
 
 
@@ -165,14 +167,14 @@ class BIDSLayoutIndexer:
         all_bfs, all_tag_dicts = self._index_dir(self._layout._root, self._config)
 
         self.session.bulk_save_objects(all_bfs)
-        self.session.bulk_insert_mappings(Tag, all_tag_dicts)
+        self.session.bulk_insert_mappings(Tag, all_tag_dicts)  # ty: ignore[invalid-argument-type]
         self.session.commit()
 
         if self.index_metadata:
             self._index_metadata()
 
     @property
-    def session(self):  # noqa: D102
+    def session(self) -> 'Session':  # noqa: D102
         return self._layout.connection_manager.session
 
     def _validate_file(self, f: Path) -> bool:
@@ -539,7 +541,7 @@ class BIDSLayoutIndexer:
                 all_tag_dicts.append(tag)
 
         self.session.bulk_save_objects(all_objs)
-        self.session.bulk_insert_mappings(Tag, all_tag_dicts)
+        self.session.bulk_insert_mappings(Tag, all_tag_dicts)  # ty: ignore[invalid-argument-type]
         self.session.commit()
 
 

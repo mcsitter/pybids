@@ -1,5 +1,7 @@
 """BIDSLayout class."""
 
+from __future__ import annotations
+
 import copy
 import difflib
 import enum
@@ -16,7 +18,7 @@ from typing import TYPE_CHECKING, Literal, overload
 import sqlalchemy as sa
 import sqlalchemy.orm
 from bids_validator import BIDSValidator
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import Session, aliased
 from sqlalchemy.sql.expression import cast
 from upath import UPath as Path
 
@@ -29,12 +31,15 @@ from ..exceptions import (
 )
 from ..external import inflect
 from ..utils import hashablefy, listify, natural_sort
+from ..variables.collections import BIDSVariableCollection
 from .db import ConnectionManager
 from .index import BIDSLayoutIndexer
 from .models import BIDSFile, Config, DerivativeDatasets, Entity, Tag
 from .utils import BIDSMetadata, parse_file_entities
 from .validation import EXAMPLE_DERIVATIVES_DESCRIPTION, validate_derivative_path, validate_root
 from .writing import build_path, write_to_file
+
+CollectionLevel = Literal['run', 'session', 'subject', 'dataset']
 
 if sys.version_info >= (3, 11):
     from operator import call
@@ -324,7 +329,7 @@ class BIDSLayout:
             ]
         )
 
-    def _get_layouts_in_scope(self, scope: Scope) -> list['BIDSLayout']:
+    def _get_layouts_in_scope(self, scope: Scope) -> list[BIDSLayout]:
         """Return all layouts in the passed scope."""
         if scope == 'self':
             return [self]
@@ -360,26 +365,26 @@ class BIDSLayout:
         return entities
 
     @property
-    def session(self):  # noqa: D102
+    def session(self) -> Session:  # noqa: D102
         return self.connection_manager.session
 
     @property
     @lru_cache  # noqa: B019
-    def config(self):  # noqa: D102
+    def config(self) -> dict[str, Config]:  # noqa: D102
         return {c.name: c for c in self.session.query(Config).all()}
 
     @property
-    def entities(self):
+    def entities(self) -> dict[str, Entity]:
         """Get the entities."""
         return self.get_entities()
 
     @property
-    def files(self):
+    def files(self) -> dict[str, BIDSFile]:
         """Get the files."""
         return self.get_files()
 
     @classmethod
-    def load(cls, database_path):
+    def load(cls, database_path) -> BIDSLayout:
         """Load index from database path. Initialization parameters are set to
         those found in database_path JSON sidecar.
 
@@ -571,7 +576,7 @@ class BIDSLayout:
             files.update({f.path: f for f in results})
         return files
 
-    def clone(self) -> 'BIDSLayout':
+    def clone(self) -> BIDSLayout:
         """Return a deep copy of the current BIDSLayout."""
         return copy.deepcopy(self)
 
@@ -702,7 +707,7 @@ class BIDSLayout:
                 )
             self.derivatives[name] = BIDSLayout(path, is_derivative=True, **kwargs)
 
-    def to_df(self, metadata: bool = False, **filters) -> 'pd.DataFrame':
+    def to_df(self, metadata: bool = False, **filters) -> pd.DataFrame:
         """Return information for BIDSFiles tracked in Layout as pd.DataFrame.
 
         Parameters
@@ -751,6 +756,28 @@ class BIDSLayout:
 
         return data.reset_index()
 
+    @overload
+    def get(
+        self,
+        return_type: Literal['object'] = 'object',
+        target: str | None = None,
+        scope: Scope = 'all',
+        regex_search: bool = False,
+        absolute_paths=RemovedOption,
+        invalid_filters: Literal['error', 'drop', 'allow'] = 'error',
+        **filters,
+    ) -> list[BIDSFile]: ...
+    @overload
+    def get(
+        self,
+        return_type: Literal['dir', 'id', 'file', 'filename'] = 'file',
+        target: str | None = None,
+        scope: Scope = 'all',
+        regex_search: bool = False,
+        absolute_paths=RemovedOption,
+        invalid_filters: Literal['error', 'drop', 'allow'] = 'error',
+        **filters,
+    ) -> list[str]: ...
     def get(  # noqa: D417
         self,
         return_type='object',
@@ -977,7 +1004,7 @@ class BIDSLayout:
                 return result
         return None
 
-    def _build_file_query(self, **kwargs) -> 'sqlalchemy.orm.Query':
+    def _build_file_query(self, **kwargs) -> sqlalchemy.orm.Query:
         query = self.session.query(BIDSFile).filter_by(is_dir=False)
 
         filters = kwargs.get('filters')
@@ -1048,16 +1075,40 @@ class BIDSLayout:
 
         return query
 
+    @overload
     def get_collections(
         self,
-        level,
-        types=None,
-        variables=None,
-        merge=False,
-        sampling_rate=None,
-        skip_empty=False,
+        level: CollectionLevel,
+        types: str | list[str] | None = None,
+        variables: list[str] | None = None,
+        merge: Literal[False] = False,
+        sampling_rate: int | str | None = None,
+        skip_empty: bool = False,
         **kwargs,
-    ):
+    ) -> list[BIDSVariableCollection]: ...
+
+    @overload
+    def get_collections(
+        self,
+        level: CollectionLevel,
+        types: str | list[str] | None = None,
+        variables: list[str] | None = None,
+        merge: Literal[True] = True,
+        sampling_rate: int | str | None = None,
+        skip_empty: bool = False,
+        **kwargs,
+    ) -> BIDSVariableCollection: ...
+
+    def get_collections(
+        self,
+        level: CollectionLevel,
+        types: str | list[str] | None = None,
+        variables: list[str] | None = None,
+        merge: bool = False,
+        sampling_rate: int | str | None = None,
+        skip_empty: bool = False,
+        **kwargs,
+    ) -> list[BIDSVariableCollection] | BIDSVariableCollection | None:
         """Return one or more variable Collections in the BIDS project.
 
         Parameters
@@ -1137,7 +1188,7 @@ class BIDSLayout:
         """
         md = BIDSMetadata(str(path))
         for layout in self._get_layouts_in_scope(scope):
-            query = layout.session.query(Tag).join(BIDSFile).filter(BIDSFile.path == str(path))
+            query = layout.session.query(Tag).join(BIDSFile).filter(BIDSFile.path == str(path))  # ty: ignore[invalid-argument-type]
 
             if not include_entities:
                 query = query.join(Entity).filter(Tag.is_metadata == True)  # noqa: E712
@@ -1190,14 +1241,62 @@ class BIDSLayout:
             descriptions.append(file.get_dict())
         return descriptions if all_ else descriptions[0]
 
+    @overload
+    def get_nearest(
+        self,
+        path: str | Path,
+        return_type: Literal['filename'] = 'filename',
+        strict: bool = True,
+        all_: Literal[False] = False,
+        ignore_strict_entities: str | list = 'extension',
+        full_search: bool = False,
+        **filters,
+    ) -> str | None: ...
+
+    @overload
+    def get_nearest(
+        self,
+        path: str | Path,
+        return_type: Literal['filename'],
+        strict: bool = True,
+        all_: Literal[True] = True,
+        ignore_strict_entities: str | list = 'extension',
+        full_search: bool = False,
+        **filters,
+    ) -> list[str]: ...
+
+    @overload
+    def get_nearest(
+        self,
+        path: str | Path,
+        return_type: Literal['tuple'],
+        strict: bool = True,
+        all_: Literal[False] = False,
+        ignore_strict_entities: str | list = 'extension',
+        full_search: bool = False,
+        **filters,
+    ) -> BIDSFile | None: ...
+
+    @overload
+    def get_nearest(
+        self,
+        path: str | Path,
+        return_type: Literal['tuple'],
+        strict: bool = True,
+        all_: Literal[True] = True,
+        ignore_strict_entities: str | list = 'extension',
+        full_search: bool = False,
+        **filters,
+    ) -> list[BIDSFile]: ...
+
     def get_nearest(  # noqa: D417
         self,
-        path,
-        return_type='filename',
-        strict=True,
-        all_=False,
-        ignore_strict_entities='extension',
-        full_search=False,
+        path: str | Path,
+        return_type: Literal['filename', 'tuple'] = 'filename',
+        strict: bool = True,
+        all_: bool = False,
+        ignore_strict_entities: str | list = 'extension',
+        full_search: bool = False,
         **filters,
     ):
         """Walk up file tree from specified path and return nearest matching file(s).
@@ -1432,7 +1531,7 @@ class BIDSLayout:
         scope: Scope = 'all',
         validate: bool = True,
         absolute_paths: bool = True,
-    ):
+    ) -> str:
         """Construct a target filename for a file or dictionary of entities.
 
         Parameters

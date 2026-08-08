@@ -1,4 +1,4 @@
-# ruff: noqa: D404
+# ruff: noqa: D404, ANN201
 """This module allows you to mock the config file as needed.  # noqa: D404
 A default fixture that simply returns a safe-to-modify copy of
 the default value is provided.
@@ -22,7 +22,7 @@ from upath import UPath as Path
 
 
 @pytest.fixture
-def config_paths():  # noqa: D103
+def config_paths() -> list[str]:  # noqa: D103
     import bids.config
 
     return bids.config.get_option('config_paths').copy()

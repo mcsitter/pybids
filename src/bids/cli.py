@@ -57,7 +57,7 @@ class Either(click.ParamType):
         tpstrings = tuple(tp.name for tp in self.types)  # noqa: F841
         return 'any type in {tpstrings}'
 
-    def convert(self, value, param, ctx):  # noqa: D102
+    def convert(self, value, param, ctx) -> None:  # noqa: D102
         errors = []
         for tp in self.types:
             try:
@@ -220,7 +220,7 @@ def upgrade(root) -> None:
         click.echo('No changes to make!')
 
 
-def upgrade_dataset_description(description):
+def upgrade_dataset_description(description: dict) -> dict:
     """Upgrade dataset_description.json with recommended values"""
     description = deepcopy(description)
 

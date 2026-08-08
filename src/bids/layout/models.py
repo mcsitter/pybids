@@ -886,7 +886,7 @@ class Entity(Base):
             setattr(result, k, new_val)
         return result
 
-    def match_file(self, f):
+    def match_file(self, f: BIDSFile) -> str | None:
         """Determine whether the passed file matches the Entity.
 
         Parameters
@@ -906,7 +906,7 @@ class Entity(Base):
 
         return self._astype(val)
 
-    def unique(self):
+    def unique(self) -> list[str]:
         """Return all unique values/levels for the current entity."""
         return list(set(self.files.values()))
 

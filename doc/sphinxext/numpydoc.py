@@ -79,7 +79,7 @@ def mangle_docstrings(app, what, name, obj, options, lines, reference_offset=[0]
     reference_offset[0] += len(references)
 
 
-def mangle_signature(app, what, name, obj, options, sig, retann):  # noqa: D103
+def mangle_signature(app, what, name, obj, options, sig, retann) -> tuple[str, str] | None:  # noqa: D103
     # Do not try to inspect classes that don't define `__init__`
     if inspect.isclass(obj) and (
         not hasattr(obj, '__init__') or 'initializes x; see ' in pydoc.getdoc(obj.__init__)
@@ -87,10 +87,10 @@ def mangle_signature(app, what, name, obj, options, sig, retann):  # noqa: D103
         return '', ''
 
     if not (isinstance(obj, collections.abc.Callable) or hasattr(obj, '__argspec_is_invalid_')):
-        return
+        return None
 
     if not hasattr(obj, '__doc__'):
-        return
+        return None
 
     doc = SphinxDocString(pydoc.getdoc(obj))
     if doc['Signature']:

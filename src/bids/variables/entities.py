@@ -8,11 +8,11 @@ from typing import Literal, overload
 
 import pandas as pd
 
-from bids.utils import matches_entities
-
+from ..utils import matches_entities
 from . import collections as clc
 
 BASE_ENTITIES = ['subject', 'session', 'task', 'run']
+CollectionLevel = Literal['run', 'session', 'subject', 'dataset']
 
 
 class Node:
@@ -114,16 +114,22 @@ class NodeIndex:
     @overload
     def get_collections(
         self,
-        unit: Literal['run'],
-        names=None,
+        unit: CollectionLevel,
+        names: list[str] | None = None,
         merge: Literal[False] = False,
-        sampling_rate=None,
+        sampling_rate: int | str | None = None,
         **entities,
-    ) -> list[clc.BIDSRunVariableCollection]: ...
+    ) -> list[clc.BIDSVariableCollection]: ...
+
     @overload
     def get_collections(
-        self, unit: str, names=None, merge: Literal[True] = True, sampling_rate=None, **entities
-    ) -> list[clc.BIDSVariableCollection]: ...
+        self,
+        unit: CollectionLevel,
+        names: list[str] | None = None,
+        merge: Literal[True] = True,
+        sampling_rate: int | str | None = None,
+        **entities,
+    ) -> clc.BIDSVariableCollection | None: ...
 
     def get_collections(self, unit, names=None, merge=False, sampling_rate=None, **entities):
         """Retrieve variable data for a specified level in the Dataset.

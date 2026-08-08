@@ -3,18 +3,37 @@
 import json
 import os
 import warnings
+from typing import Literal, TypedDict, overload
 
 from upath import UPath as Path
 
 from .utils import listify
+
+
+class ConfigPaths(TypedDict):
+    """Store paths to layout configuration files."""
+
+    bids: str
+    derivatives: str
+
+
+class Settings(TypedDict):
+    """Store package-level settings."""
+
+    config_paths: ConfigPaths
+    extension_initial_dot: bool
+
 
 __all__ = ['set_option', 'set_options', 'get_option']
 
 _config_name = 'pybids_config.json'
 
 conf_path = str(Path(__file__).absolute().parent.joinpath('layout', 'config', '{}.json'))
-_default_settings = {
-    'config_paths': {name: conf_path.format(name) for name in ['bids', 'derivatives']},
+_default_settings: Settings = {
+    'config_paths': {
+        'bids': conf_path.format('bids'),
+        'derivatives': conf_path.format('derivatives'),
+    },
     # XXX 0.16: Remove
     'extension_initial_dot': True,
 }
@@ -55,15 +74,18 @@ def set_options(**kwargs) -> None:
         set_option(k, v)
 
 
-def get_option(key):
-    """Retrieve the current value of a package-wide option.
+@overload
+def get_option(key: Literal['config_paths']) -> ConfigPaths: ...
+@overload
+def get_option(key: Literal['extension_initial_dot']) -> bool: ...
 
-    Args:
-        key (str): The name of the option to retrieve.
 
-    """
+def get_option(
+    key: Literal['config_paths'] | Literal['extension_initial_dot'],
+) -> ConfigPaths | bool:
+    """Retrieve the current value of a package-wide option."""
     if key not in _settings:
-        raise ValueError("Invalid pybids setting: '%s'" % key)  # noqa: UP031
+        raise ValueError(f'Invalid pybids setting: {key!r}')
     return _settings[key]
 
 
@@ -111,5 +133,5 @@ def _update_from_standard_locations():
     from_file(locs, False)
 
 
-_settings = {}
+_settings: Settings
 reset_options(True)
