@@ -137,7 +137,7 @@ class BIDSStatsModelsGraph:
         return self._root_node
 
     @staticmethod
-    def _load_model(model, validate=True):
+    def _load_model(model, validate=True) -> dict:
         # Load model info from JSON and do some validation
         if isinstance(model, str):
             with open(model, encoding='utf-8') as fobj:
@@ -149,7 +149,7 @@ class BIDSStatsModelsGraph:
         return model
 
     @staticmethod
-    def _load_nodes(model):
+    def _load_nodes(model) -> OrderedDict:
         nodes = OrderedDict()
         for node_args in model['nodes']:
             node = BIDSStatsModelsNode(**node_args)
@@ -157,7 +157,7 @@ class BIDSStatsModelsGraph:
         return nodes
 
     @staticmethod
-    def _load_edges(model, nodes):
+    def _load_edges(model, nodes) -> list[dict]:
         """Build edges between nodes."""
         edges = model.get('edges', [])
         # assume we have an optional top-level 'Pipeline' field
@@ -387,7 +387,7 @@ class BIDSStatsModelsNode:
         return f'<{self.__class__.__name__}(level={self.level}, name={self.name})>'
 
     @staticmethod
-    def _build_groups(objects, group_by):
+    def _build_groups(objects, group_by) -> dict:
         """Group list of objects into bins defined by specified entities.
 
         Parameters

@@ -7,7 +7,7 @@ import warnings
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any
+from typing import TypeVar
 
 import numpy as np
 import pandas as pd
@@ -17,6 +17,8 @@ from bids.modeling import transformations as pbt
 from bids.utils import convert_JSON, listify
 from bids.variables import SparseRunVariable
 from bids.variables.collections import BIDSVariableCollection
+
+U = TypeVar('U')
 
 
 class Transformation(metaclass=ABCMeta):  # noqa: D101
@@ -349,7 +351,7 @@ class Transformation(metaclass=ABCMeta):  # noqa: D101
                     self.collection[_output] = col
 
     @abstractmethod
-    def _transform(self, *args, **kwargs) -> Any:
+    def _transform(self, *args, **kwargs) -> U:
         raise NotImplementedError('Transformations must implement a _transform() method.')
 
     def _preprocess(self, col):
